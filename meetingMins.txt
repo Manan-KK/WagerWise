@@ -1,0 +1,27 @@
+Session 1 10/29/2025
+    Will: 
+    -This week: 
+        -Finished UML Diagram
+    -Next week: 
+        -get better outline of project 
+        -code skeleton
+    Manan:
+    -This week: 
+        -Found API
+    -Next week: 
+        -Set up database
+    George: 
+    -This week: 
+        -Drawing API connections
+    -Next week:
+        -implement and help frontend and front facing pages so you can add backend later
+    Justin: 
+    -This week:
+        -Made wireframes
+    -Next week:
+        -go from lo spec to hi spec frames
+        -grocery list
+
+BLOCKERS: 
+10/29
+    -repos (TA will fix tonight)
