@@ -1,9 +1,19 @@
 1) Team 014 -2
-2) WagerWise
+2) BudgetBites
 3) Members:
     Manan Kothari - Manan-KK - mako1963@colorado.edu
     Will Gantt - WillGantt - wiga7071@colorado.edu
     Justin Nguyen - jung2014 - jung2014@colorado.edu
     George Latham - GeorgeLatham06 - gela2135@colorado.edu
-4) WagerWise
-5)
+4) BudgetBites
+5)BudgetBites is a meal-planning web app designed specifically for college students who want to eat well without draining their wallet. 
+The app helps users generate weekly meal plans and grocery lists that prioritize low-cost ingredients, simple recipes, and minimal cooking equipment for dorm kitchens or shared student apartments. Users can input dietary restrictions, food preferences, cook time preferences and a weekly budget, and BudgetBites will match them with affordable recipes and meal plans optimized for cost and convenience.
+Instead of relying on random TikTok recipes or expensive delivery apps, BudgetBites provides structure, predictability, and real savings. It takes the stress out of figuring out what to eat, helps users avoid impulsive takeout spending, and encourages healthier and cheaper eating habits over time.
+6) The main audience is towards those who prefer convenience and cost over maximum quality like college students or busy workers.
+7)For college students pr busy workers struggling to eat affordably and consistently, BudgetBites is a meal-planning web app that generates cheap, simple weekly meal plans and grocery lists tailored to a student budget. 
+Unlike generic recipe sites or expensive meal kits, BudgetBites focuses on low-cost ingredients, minimal cooking effort, and budget-based planning, making it easier to save money and eat better week to week.
+9) Agile methodology hybridizing two scrum meetings and a kanban board
+10) We have a group discord server
+11) We will meet Tuesday and Thursday afternoons while meeting with the ta over zoom at 5:45PM on Wednesdays.
+12)Linked.
+13) https://www.relume.io/app/project/P2656477_RX3TS0XNigWqgcdNe0tqsL9lgx4S8XvsgqdUJb3YDfo#mode=wireframe
