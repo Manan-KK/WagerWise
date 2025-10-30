@@ -1,2 +1,2 @@
-# WagerWise
-Predictive Gambling Training
+# BudgetBites
+College Meal Planning
