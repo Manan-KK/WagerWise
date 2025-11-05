@@ -1,0 +1,81 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow">
+        <div class="card-body p-5">
+          <h2 class="card-title text-center mb-4">Account Settings</h2>
+          
+          {{> message}}
+          
+          <!-- Update Username Form -->
+          <div class="mb-5">
+            <h4 class="mb-3">Change Username</h4>
+            <form action="/settings/username" method="POST">
+              <div class="mb-3">
+                <label for="current-username" class="form-label">Current Username</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="current-username" 
+                  value="{{user.username}}" 
+                  disabled>
+              </div>
+              <div class="mb-3">
+                <label for="new-username" class="form-label">New Username</label>
+                <input 
+                  type="text" 
+                  class="form-control" 
+                  id="new-username" 
+                  name="username" 
+                  placeholder="Enter new username"
+                  required>
+              </div>
+              <button type="submit" class="btn btn-primary">Update Username</button>
+            </form>
+          </div>
+          
+          <hr class="my-4">
+          
+          <!-- Update Password Form -->
+          <div>
+            <h4 class="mb-3">Change Password</h4>
+            <form action="/settings/password" method="POST">
+              <div class="mb-3">
+                <label for="current-password" class="form-label">Current Password</label>
+                <input 
+                  type="password" 
+                  class="form-control" 
+                  id="current-password" 
+                  name="currentPassword" 
+                  placeholder="Enter current password"
+                  required>
+              </div>
+              <div class="mb-3">
+                <label for="new-password" class="form-label">New Password</label>
+                <input 
+                  type="password" 
+                  class="form-control" 
+                  id="new-password" 
+                  name="newPassword" 
+                  placeholder="Enter new password"
+                  required>
+              </div>
+              <div class="mb-3">
+                <label for="confirm-password" class="form-label">Confirm New Password</label>
+                <input 
+                  type="password" 
+                  class="form-control" 
+                  id="confirm-password" 
+                  name="confirmPassword" 
+                  placeholder="Confirm new password"
+                  required>
+              </div>
+              <button type="submit" class="btn btn-primary">Update Password</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
