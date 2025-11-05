@@ -1,0 +1,112 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12">
+      <h1 class="mb-4">Weekly Grocery List</h1>
+      <a href="/discover" class="btn btn-outline-secondary mb-3">← Back to Discover</a>
+    </div>
+  </div>
+
+  <!-- Selected Recipes Summary -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Selected Recipes</h5>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        {{#each recipes}}
+        <div class="col-md-6 mb-2">
+          <div class="d-flex align-items-center">
+            {{#if image}}
+            <img src="{{image}}" alt="{{title}}" class="me-2" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
+            {{/if}}
+            <div>
+              <strong>{{title}}</strong>
+              {{#if readyInMinutes}}
+              <br><small class="text-muted">{{readyInMinutes}} min • Serves {{servings}}</small>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Cost Summary -->
+  <div class="alert alert-info">
+    <h5 class="alert-heading">Estimated Total Cost</h5>
+    <p class="mb-0"><strong>${{totalEstimatedCost}}</strong> (estimated based on ingredient prices)</p>
+  </div>
+
+  <!-- Grocery List -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">Shopping List</h5>
+    </div>
+    <div class="card-body">
+      {{#if groupedByAisle}}
+      <!-- Group by aisle -->
+      {{#each groupedByAisle}}
+      <div class="mb-4">
+        <h6 class="border-bottom pb-2 mb-3">{{@key}}</h6>
+        <div class="row">
+          {{#each this}}
+          <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-start">
+                  {{#if image}}
+                  <img src="https://spoonacular.com/cdn/ingredients_100x100/{{image}}" 
+                       alt="{{name}}" 
+                       class="me-2" 
+                       style="width: 50px; height: 50px; object-fit: cover;">
+                  {{/if}}
+                  <div class="flex-grow-1">
+                    <h6 class="card-title mb-1">{{name}}</h6>
+                    <p class="card-text mb-1">
+                      <small class="text-muted">{{original}}</small>
+                    </p>
+                    {{#if estimatedCost}}
+                    <p class="mb-1">
+                      <strong>Estimated Cost: ${{estimatedCost}}</strong>
+                    </p>
+                    {{/if}}
+                    <details class="mt-2">
+                      <summary class="text-primary" style="cursor: pointer; font-size: 0.9em;">
+                        Used in recipes
+                      </summary>
+                      <ul class="mt-2 mb-0" style="font-size: 0.85em;">
+                        {{#each recipes}}
+                        <li>{{this}}</li>
+                        {{/each}}
+                      </ul>
+                    </details>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/each}}
+      {{else}}
+      <p class="text-muted">No ingredients found.</p>
+      {{/if}}
+    </div>
+  </div>
+
+  <!-- Print Button -->
+  <div class="mt-4 mb-4">
+    <button onclick="window.print()" class="btn btn-primary">Print Grocery List</button>
+  </div>
+</div>
+
+<style>
+@media print {
+  .btn, nav, header {
+    display: none !important;
+  }
+}
+</style>
+

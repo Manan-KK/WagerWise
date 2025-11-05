@@ -11,6 +11,7 @@ const pgp = require('pg-promise')(); // To connect to the Postgres DB from the n
 const bodyParser = require('body-parser');
 const session = require('express-session'); // To set the session object. To store or access session data, use the `req.session`, which is (generally) serialized as JSON by the store.
 const bcrypt = require('bcryptjs'); //  To hash passwords
+const axios = require('axios'); // For making HTTP requests to external APIs
 
 // *****************************************************
 // <!-- Section 2 : Connect to DB -->
@@ -22,6 +23,24 @@ const hbs = handlebars.create({
   layoutsDir: path.join(__dirname, '../views/layouts'),
   partialsDir: path.join(__dirname, '../views/partials'),
   defaultLayout: 'main',
+});
+
+// Register Handlebars helpers
+Handlebars.registerHelper('eq', function(a, b) {
+  return a === b;
+});
+
+Handlebars.registerHelper('groupBy', function(array, property) {
+  if (!array || !Array.isArray(array)) return {};
+  const grouped = {};
+  array.forEach(item => {
+    const key = item[property] || 'Unknown';
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+    grouped[key].push(item);
+  });
+  return grouped;
 });
 
 // database configuration
@@ -46,7 +65,15 @@ db.connect()
   });
 
 // *****************************************************
-// <!-- Section 3 : App Settings -->
+// <!-- Section 3 : API Configuration -->
+// *****************************************************
+
+// Spoonacular API configuration
+const SPOONACULAR_API_KEY = 'd172638adb4d4089925a33f2d0f820cd';
+const SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
+
+// *****************************************************
+// <!-- Section 4 : App Settings -->
 // *****************************************************
 
 // Register `hbs` as our view engine using its bound `engine()` function.
@@ -71,7 +98,7 @@ app.use(
 );
 
 // *****************************************************
-// <!-- Section 4 : API Routes -->
+// <!-- Section 5 : API Routes -->
 // *****************************************************
 
 // Authentication Middleware.
@@ -162,7 +189,268 @@ app.get('/logout', (req, res) => {
 app.use(auth);
 
 app.get('/discover', (req, res) => {
-  res.render('pages/discover', { user: req.session.user });
+  res.render('pages/discover', { 
+    user: req.session.user,
+    results: null,
+    searchParams: null
+  });
+});
+
+// POST route for recipe search
+app.post('/discover/search', async (req, res) => {
+  try {
+    const {
+      query,
+      diet,
+      intolerances,
+      ingredients,
+      maxReadyTime,
+      minCalories,
+      maxCalories,
+      minPrice,
+      maxPrice,
+      number = 10
+    } = req.body;
+
+    // Build query parameters for Spoonacular API
+    const params = {
+      apiKey: SPOONACULAR_API_KEY,
+      number: Math.min(parseInt(number) || 10, 100), // Max 100 recipes
+      addRecipeInformation: true,
+      addRecipeNutrition: true,
+      addRecipePrice: true,
+    };
+
+    // Add optional parameters
+    if (query) params.query = query;
+    if (diet && diet !== 'none') params.diet = diet;
+    if (intolerances) params.intolerances = intolerances;
+    if (maxReadyTime) params.maxReadyTime = parseInt(maxReadyTime);
+    if (minCalories) params.minCalories = parseInt(minCalories);
+    if (maxCalories) params.maxCalories = parseInt(maxCalories);
+    if (minPrice) params.minPrice = parseFloat(minPrice);
+    if (maxPrice) params.maxPrice = parseFloat(maxPrice);
+    if (ingredients) {
+      // If ingredients are provided, use findByIngredients endpoint first
+      return res.redirect(`/discover/ingredients?ingredients=${encodeURIComponent(ingredients)}&${new URLSearchParams(params)}`);
+    }
+
+    // Call Spoonacular Complex Recipe Search endpoint
+    const response = await axios.get(`${SPOONACULAR_BASE_URL}/recipes/complexSearch`, {
+      params: params
+    });
+
+    const recipes = response.data.results || [];
+
+    // Get detailed information for each recipe including prices
+    const detailedRecipes = await Promise.all(
+      recipes.slice(0, 20).map(async (recipe) => {
+        try {
+          const detailResponse = await axios.get(
+            `${SPOONACULAR_BASE_URL}/recipes/${recipe.id}/information`,
+            {
+              params: {
+                apiKey: SPOONACULAR_API_KEY,
+                includeNutrition: true,
+              }
+            }
+          );
+          const recipeData = detailResponse.data;
+          // Format price per serving (divide by 100 as Spoonacular returns in cents)
+          if (recipeData.pricePerServing) {
+            recipeData.pricePerServing = (recipeData.pricePerServing / 100).toFixed(2);
+          }
+          return recipeData;
+        } catch (error) {
+          console.error(`Error fetching recipe ${recipe.id}:`, error.message);
+          return recipe;
+        }
+      })
+    );
+
+    res.render('pages/discover', {
+      user: req.session.user,
+      results: detailedRecipes.filter(r => r !== null),
+      searchParams: req.body,
+      message: detailedRecipes.length > 0 ? `Found ${detailedRecipes.length} recipes!` : 'No recipes found. Try adjusting your search criteria.',
+      error: detailedRecipes.length === 0
+    });
+  } catch (error) {
+    console.error('Error searching recipes:', error.response?.data || error.message);
+    res.render('pages/discover', {
+      user: req.session.user,
+      results: null,
+      searchParams: req.body,
+      message: 'Error searching recipes. Please try again.',
+      error: true
+    });
+  }
+});
+
+// GET route for ingredient-based search
+app.get('/discover/ingredients', async (req, res) => {
+  try {
+    const ingredients = req.query.ingredients;
+    const params = {
+      apiKey: SPOONACULAR_API_KEY,
+      ingredients: ingredients,
+      number: Math.min(parseInt(req.query.number) || 10, 100),
+      ranking: 1, // Maximize used ingredients
+      ignorePantry: true
+    };
+
+    const response = await axios.get(`${SPOONACULAR_BASE_URL}/recipes/findByIngredients`, {
+      params: params
+    });
+
+    const recipes = response.data || [];
+
+    // Get detailed information for each recipe
+    const detailedRecipes = await Promise.all(
+      recipes.slice(0, 20).map(async (recipe) => {
+        try {
+          const detailResponse = await axios.get(
+            `${SPOONACULAR_BASE_URL}/recipes/${recipe.id}/information`,
+            {
+              params: {
+                apiKey: SPOONACULAR_API_KEY,
+                includeNutrition: true,
+              }
+            }
+          );
+          const recipeData = detailResponse.data;
+          // Format price per serving (divide by 100 as Spoonacular returns in cents)
+          if (recipeData.pricePerServing) {
+            recipeData.pricePerServing = (recipeData.pricePerServing / 100).toFixed(2);
+          }
+          return recipeData;
+        } catch (error) {
+          console.error(`Error fetching recipe ${recipe.id}:`, error.message);
+          return null;
+        }
+      })
+    );
+
+    res.render('pages/discover', {
+      user: req.session.user,
+      results: detailedRecipes.filter(r => r !== null),
+      searchParams: { ingredients: ingredients },
+      message: detailedRecipes.length > 0 ? `Found ${detailedRecipes.length} recipes!` : 'No recipes found. Try different ingredients.',
+      error: detailedRecipes.length === 0
+    });
+  } catch (error) {
+    console.error('Error searching by ingredients:', error.response?.data || error.message);
+    res.render('pages/discover', {
+      user: req.session.user,
+      results: null,
+      searchParams: req.query,
+      message: 'Error searching recipes. Please try again.',
+      error: true
+    });
+  }
+});
+
+// POST route to generate weekly grocery list
+app.post('/discover/grocery-list', async (req, res) => {
+  try {
+    const { recipeIds } = req.body;
+    
+    if (!recipeIds || !Array.isArray(recipeIds) || recipeIds.length === 0) {
+      return res.render('pages/discover', {
+        user: req.session.user,
+        results: null,
+        message: 'Please select at least one recipe.',
+        error: true
+      });
+    }
+
+    // Get detailed recipe information for all selected recipes
+    const recipes = await Promise.all(
+      recipeIds.map(async (id) => {
+        try {
+          const response = await axios.get(
+            `${SPOONACULAR_BASE_URL}/recipes/${id}/information`,
+            {
+              params: {
+                apiKey: SPOONACULAR_API_KEY,
+                includeNutrition: true,
+              }
+            }
+          );
+          return response.data;
+        } catch (error) {
+          console.error(`Error fetching recipe ${id}:`, error.message);
+          return null;
+        }
+      })
+    );
+
+    // Aggregate ingredients from all recipes
+    const ingredientMap = new Map();
+    let totalEstimatedCost = 0;
+
+    recipes.forEach(recipe => {
+      if (!recipe || !recipe.extendedIngredients) return;
+      
+      recipe.extendedIngredients.forEach(ingredient => {
+        const key = ingredient.name.toLowerCase();
+        if (ingredientMap.has(key)) {
+          const existing = ingredientMap.get(key);
+          // Try to combine amounts (simplified - in production, would need proper unit conversion)
+          existing.amount += ingredient.amount || 0;
+          existing.recipes.push(recipe.title);
+        } else {
+          ingredientMap.set(key, {
+            id: ingredient.id,
+            name: ingredient.name,
+            original: ingredient.original,
+            amount: ingredient.amount || 0,
+            unit: ingredient.unit || '',
+            aisle: ingredient.aisle || 'Unknown',
+            image: ingredient.image,
+            estimatedCost: ingredient.estimatedCost?.value ? (ingredient.estimatedCost.value / 100).toFixed(2) : '0.00',
+            recipes: [recipe.title]
+          });
+          totalEstimatedCost += (ingredient.estimatedCost?.value || 0) / 100; // Convert cents to dollars
+        }
+      });
+    });
+
+    const groceryList = Array.from(ingredientMap.values());
+    
+    // Sort by aisle for better organization
+    groceryList.sort((a, b) => {
+      if (a.aisle < b.aisle) return -1;
+      if (a.aisle > b.aisle) return 1;
+      return 0;
+    });
+
+    // Group by aisle for easier rendering
+    const groupedByAisle = {};
+    groceryList.forEach(item => {
+      const aisle = item.aisle || 'Unknown';
+      if (!groupedByAisle[aisle]) {
+        groupedByAisle[aisle] = [];
+      }
+      groupedByAisle[aisle].push(item);
+    });
+
+    res.render('pages/grocery-list', {
+      user: req.session.user,
+      recipes: recipes.filter(r => r !== null),
+      groceryList: groceryList,
+      groupedByAisle: groupedByAisle,
+      totalEstimatedCost: totalEstimatedCost.toFixed(2)
+    });
+  } catch (error) {
+    console.error('Error generating grocery list:', error.response?.data || error.message);
+    res.render('pages/discover', {
+      user: req.session.user,
+      results: null,
+      message: 'Error generating grocery list. Please try again.',
+      error: true
+    });
+  }
 });
 
 app.get('/dashboard', (req, res) => {

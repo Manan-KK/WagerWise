@@ -1,8 +1,208 @@
-<div class="container mt-5">
+<div class="container mt-4">
   <div class="row">
-    <div class="col">
-      <h1>Discover</h1>
+    <div class="col-12">
+      <h1 class="mb-4">Discover Recipes</h1>
+      <p class="lead">Find recipes based on your dietary preferences, ingredients, budget, and time constraints</p>
     </div>
   </div>
+
+  {{#if message}}
+  <div class="alert alert-{{#if error}}danger{{else}}success{{/if}} alert-dismissible fade show" role="alert">
+    {{message}}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+  {{/if}}
+
+  <!-- Search Form -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Search Preferences</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="/discover/search">
+        <div class="row">
+          <!-- Recipe Search Query -->
+          <div class="col-md-6 mb-3">
+            <label for="query" class="form-label">Recipe Name or Keywords</label>
+            <input type="text" class="form-control" id="query" name="query" 
+                   placeholder="e.g., pasta, chicken, vegetarian" 
+                   value="{{searchParams.query}}">
+          </div>
+
+          <!-- Ingredients -->
+          <div class="col-md-6 mb-3">
+            <label for="ingredients" class="form-label">Ingredients (comma-separated)</label>
+            <input type="text" class="form-control" id="ingredients" name="ingredients" 
+                   placeholder="e.g., chicken, tomatoes, pasta" 
+                   value="{{searchParams.ingredients}}">
+            <small class="form-text text-muted">Leave empty to search by recipe name</small>
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Dietary Preferences -->
+          <div class="col-md-6 mb-3">
+            <label for="diet" class="form-label">Dietary Preference</label>
+            <select class="form-select" id="diet" name="diet">
+              <option value="none" {{#if (eq searchParams.diet 'none')}}selected{{/if}}>No preference</option>
+              <option value="vegetarian" {{#if (eq searchParams.diet 'vegetarian')}}selected{{/if}}>Vegetarian</option>
+              <option value="vegan" {{#if (eq searchParams.diet 'vegan')}}selected{{/if}}>Vegan</option>
+              <option value="gluten-free" {{#if (eq searchParams.diet 'gluten-free')}}selected{{/if}}>Gluten Free</option>
+              <option value="ketogenic" {{#if (eq searchParams.diet 'ketogenic')}}selected{{/if}}>Ketogenic</option>
+              <option value="pescetarian" {{#if (eq searchParams.diet 'pescetarian')}}selected{{/if}}>Pescetarian</option>
+              <option value="paleo" {{#if (eq searchParams.diet 'paleo')}}selected{{/if}}>Paleo</option>
+              <option value="primal" {{#if (eq searchParams.diet 'primal')}}selected{{/if}}>Primal</option>
+              <option value="low-fodmap" {{#if (eq searchParams.diet 'low-fodmap')}}selected{{/if}}>Low FODMAP</option>
+              <option value="whole30" {{#if (eq searchParams.diet 'whole30')}}selected{{/if}}>Whole30</option>
+            </select>
+          </div>
+
+          <!-- Intolerances -->
+          <div class="col-md-6 mb-3">
+            <label for="intolerances" class="form-label">Intolerances (comma-separated)</label>
+            <input type="text" class="form-control" id="intolerances" name="intolerances" 
+                   placeholder="e.g., dairy, gluten, egg" 
+                   value="{{searchParams.intolerances}}">
+            <small class="form-text text-muted">Common: dairy, egg, gluten, grain, peanut, seafood, sesame, shellfish, soy, sulfite, tree-nut, wheat</small>
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Time Constraints -->
+          <div class="col-md-4 mb-3">
+            <label for="maxReadyTime" class="form-label">Max Ready Time (minutes)</label>
+            <input type="number" class="form-control" id="maxReadyTime" name="maxReadyTime" 
+                   min="1" max="300" placeholder="e.g., 30" 
+                   value="{{searchParams.maxReadyTime}}">
+          </div>
+
+          <!-- Calorie Range -->
+          <div class="col-md-4 mb-3">
+            <label for="minCalories" class="form-label">Min Calories</label>
+            <input type="number" class="form-control" id="minCalories" name="minCalories" 
+                   min="0" placeholder="e.g., 200" 
+                   value="{{searchParams.minCalories}}">
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label for="maxCalories" class="form-label">Max Calories</label>
+            <input type="number" class="form-control" id="maxCalories" name="maxCalories" 
+                   min="0" placeholder="e.g., 800" 
+                   value="{{searchParams.maxCalories}}">
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Budget Constraints -->
+          <div class="col-md-4 mb-3">
+            <label for="minPrice" class="form-label">Min Price (per serving)</label>
+            <input type="number" class="form-control" id="minPrice" name="minPrice" 
+                   min="0" step="0.01" placeholder="e.g., 1.00" 
+                   value="{{searchParams.minPrice}}">
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label for="maxPrice" class="form-label">Max Price (per serving)</label>
+            <input type="number" class="form-control" id="maxPrice" name="maxPrice" 
+                   min="0" step="0.01" placeholder="e.g., 10.00" 
+                   value="{{searchParams.maxPrice}}">
+          </div>
+
+          <!-- Number of Results -->
+          <div class="col-md-4 mb-3">
+            <label for="number" class="form-label">Number of Results</label>
+            <input type="number" class="form-control" id="number" name="number" 
+                   min="1" max="100" value="{{#if searchParams.number}}{{searchParams.number}}{{else}}10{{/if}}">
+          </div>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-primary btn-lg">Search Recipes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  {{#if results}}
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Search Results</h5>
+      <form method="POST" action="/discover/grocery-list" id="groceryListForm">
+        <button type="submit" class="btn btn-success" id="generateGroceryList" disabled>
+          Generate Grocery List (<span id="selectedCount">0</span> selected)
+        </button>
+      </form>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        {{#each results}}
+        <div class="col-md-6 col-lg-4 mb-4">
+          <div class="card h-100">
+            {{#if image}}
+            <img src="{{image}}" class="card-img-top" alt="{{title}}" style="height: 200px; object-fit: cover;">
+            {{/if}}
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">{{title}}</h5>
+              
+              <div class="mb-2">
+                <label class="form-check-label">
+                  <input type="checkbox" class="form-check-input recipe-checkbox" 
+                         name="recipeIds" value="{{id}}" 
+                         onchange="updateSelectedCount()">
+                  Select for grocery list
+                </label>
+              </div>
+
+              <div class="mb-2">
+                {{#if readyInMinutes}}
+                <span class="badge bg-info me-1"><i class="bi bi-clock"></i> {{readyInMinutes}} min</span>
+                {{/if}}
+                {{#if servings}}
+                <span class="badge bg-secondary me-1">Serves {{servings}}</span>
+                {{/if}}
+                {{#if pricePerServing}}
+                <span class="badge bg-success">${{pricePerServing}}/serving</span>
+                {{/if}}
+              </div>
+
+              {{#if summary}}
+              <p class="card-text flex-grow-1" style="font-size: 0.9em; max-height: 100px; overflow-y: auto;">{{summary}}</p>
+              {{/if}}
+
+              {{#if nutrition}}
+              <div class="mb-2">
+                <small class="text-muted">
+                  <strong>Calories:</strong> {{#if nutrition.nutrients}}{{#each nutrition.nutrients}}{{#if (eq name "Calories")}}{{amount}} kcal{{/if}}{{/each}}{{/if}}
+                </small>
+              </div>
+              {{/if}}
+
+              <div class="mt-auto">
+                <a href="{{sourceUrl}}" target="_blank" class="btn btn-sm btn-outline-primary">
+                  View Full Recipe
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+  {{/if}}
 </div>
 
+<script>
+function updateSelectedCount() {
+  const checkboxes = document.querySelectorAll('.recipe-checkbox:checked');
+  const count = checkboxes.length;
+  document.getElementById('selectedCount').textContent = count;
+  document.getElementById('generateGroceryList').disabled = count === 0;
+}
+
+// Initialize count on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updateSelectedCount();
+});
+</script>
