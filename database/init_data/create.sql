@@ -1,7 +1,17 @@
--- BudgetBites Database Setup Script
--- Run this script to create the necessary tables for the BudgetBites application
+-- Recipe Management Database Setup Script
+-- Normalized schema covering recipes, ingredients, equipment, and timing metadata
 
--- Drop table if it exists (for development/testing purposes)
+-- Drop existing tables to allow the script to be rerun during development
+DROP TABLE IF EXISTS recipe_step_times;
+DROP TABLE IF EXISTS recipe_steps;
+DROP TABLE IF EXISTS recipe_equipment;
+DROP TABLE IF EXISTS recipe_ingredients;
+DROP TABLE IF EXISTS recipe_times;
+DROP TABLE IF EXISTS time_categories;
+DROP TABLE IF EXISTS measurement_units;
+DROP TABLE IF EXISTS equipment;
+DROP TABLE IF EXISTS ingredients;
+DROP TABLE IF EXISTS recipes;
 DROP TABLE IF EXISTS users;
 
 -- Create users table
@@ -15,3 +25,107 @@ CREATE TABLE users (
 -- Create index on username for faster lookups
 CREATE INDEX idx_users_username ON users(username);
 
+-- Core recipe entity
+CREATE TABLE recipes (
+    recipe_id SERIAL PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    description TEXT,
+    servings INTEGER CHECK (servings > 0),
+    source_url VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX idx_recipes_title ON recipes (title);
+
+-- Ingredient catalog kept independent for reuse across recipes
+CREATE TABLE ingredients (
+    ingredient_id SERIAL PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    description TEXT,
+    UNIQUE (LOWER(name))
+);
+
+-- Equipment catalog for reusable kitchen tools and appliances
+CREATE TABLE equipment (
+    equipment_id SERIAL PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    description TEXT,
+    UNIQUE (LOWER(name))
+);
+
+-- Measurement units allow consistent quantities across recipe ingredients
+CREATE TABLE measurement_units (
+    unit_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    abbreviation VARCHAR(12),
+    UNIQUE (LOWER(name)),
+    UNIQUE (LOWER(abbreviation))
+);
+
+-- Junction table capturing ingredient usage per recipe
+CREATE TABLE recipe_ingredients (
+    recipe_ingredient_id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipes (recipe_id) ON DELETE CASCADE,
+    ingredient_id INTEGER NOT NULL REFERENCES ingredients (ingredient_id),
+    quantity NUMERIC(10, 2),
+    unit_id INTEGER REFERENCES measurement_units (unit_id),
+    preparation_notes VARCHAR(255),
+    UNIQUE (recipe_id, ingredient_id, unit_id, preparation_notes)
+);
+
+CREATE INDEX idx_recipe_ingredients_recipe ON recipe_ingredients (recipe_id);
+CREATE INDEX idx_recipe_ingredients_ingredient ON recipe_ingredients (ingredient_id);
+
+-- Junction table capturing equipment requirements per recipe
+CREATE TABLE recipe_equipment (
+    recipe_equipment_id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipes (recipe_id) ON DELETE CASCADE,
+    equipment_id INTEGER NOT NULL REFERENCES equipment (equipment_id),
+    quantity SMALLINT CHECK (quantity IS NULL OR quantity > 0),
+    notes VARCHAR(255),
+    UNIQUE (recipe_id, equipment_id)
+);
+
+CREATE INDEX idx_recipe_equipment_recipe ON recipe_equipment (recipe_id);
+
+-- Time categories normalize different timing contexts (e.g., prep, cook, rest)
+CREATE TABLE time_categories (
+    time_category_id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    description TEXT,
+    UNIQUE (LOWER(name))
+);
+
+-- Recipe-level timings linked to normalized categories
+CREATE TABLE recipe_times (
+    recipe_time_id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipes (recipe_id) ON DELETE CASCADE,
+    time_category_id INTEGER NOT NULL REFERENCES time_categories (time_category_id),
+    duration_minutes INTEGER NOT NULL CHECK (duration_minutes >= 0),
+    UNIQUE (recipe_id, time_category_id)
+);
+
+CREATE INDEX idx_recipe_times_recipe ON recipe_times (recipe_id);
+
+-- Optional step-by-step instructions with per-step timing if needed
+CREATE TABLE recipe_steps (
+    recipe_step_id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipes (recipe_id) ON DELETE CASCADE,
+    step_number SMALLINT NOT NULL CHECK (step_number > 0),
+    instruction TEXT NOT NULL,
+    UNIQUE (recipe_id, step_number)
+);
+
+CREATE INDEX idx_recipe_steps_recipe ON recipe_steps (recipe_id);
+
+-- Junction for associating step-specific time records to normalized categories
+CREATE TABLE recipe_step_times (
+    recipe_step_time_id SERIAL PRIMARY KEY,
+    recipe_step_id INTEGER NOT NULL REFERENCES recipe_steps (recipe_step_id) ON DELETE CASCADE,
+    time_category_id INTEGER NOT NULL REFERENCES time_categories (time_category_id),
+    duration_minutes INTEGER NOT NULL CHECK (duration_minutes >= 0),
+    UNIQUE (recipe_step_id, time_category_id)
+);
+
+CREATE INDEX idx_recipe_step_times_step ON recipe_step_times (recipe_step_id);
