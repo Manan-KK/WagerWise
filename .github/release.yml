@@ -14,29 +14,24 @@ changelog:
     - title: Exciting New Features 🎉
       labels:
         - Semver-Minor
-        - enhancement
         - feature
-        - new-feature
+        - enhancement
     - title: Recipe & Meal Planning Features 🍳
       labels:
         - recipe
-        - meal-planning
-        - spoonacular
-        - grocery-list
+        - meal planning
+        - grocery list
     - title: Bug Fixes 🐛
       labels:
-        - bug
         - bugfix
-        - fix
-    - title: UI/UX Improvements ✨
+    - title: Frontend Changes ✨
       labels:
-        - ui
-        - ux
-        - design
         - frontend
-    - title: Backend Improvements 🔧
+    - title: Backend Changes 🔧
       labels:
         - backend
+    - title: API & Database Changes 🗄️
+      labels:
         - api
         - database
     - title: Other Changes
