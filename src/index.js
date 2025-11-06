@@ -43,6 +43,13 @@ Handlebars.registerHelper('groupBy', function(array, property) {
   return grouped;
 });
 
+const stripHtmlTags = (value) => {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+  return value.replace(/<\/?[^>]+(>|$)/g, ' ').replace(/\s+/g, ' ').trim();
+};
+
 // database configuration
 const dbConfig = {
   host: 'db', // the database server (Docker service name)
@@ -117,15 +124,27 @@ app.get('/', (req, res) => {
 });
 
 app.get('/register', (req, res) => {
+  if (req.session.user) {
+    return res.redirect('/discover');
+  }
+
   res.render('pages/register');
 });
 
 app.post('/register', async (req, res) => {
   const rawUsername = (req.body.username || '').trim();
   const rawEmail = (req.body.email || '').trim();
+  const password = req.body.password || '';
+  const viewModel = {
+    form: {
+      username: rawUsername,
+      email: rawEmail
+    }
+  };
 
   if (!rawUsername) {
     return res.render('pages/register', {
+      ...viewModel,
       message: 'Please enter a valid username.',
       error: true
     });
@@ -133,22 +152,51 @@ app.post('/register', async (req, res) => {
 
   if (!EMAIL_REGEX.test(rawEmail)) {
     return res.render('pages/register', {
+      ...viewModel,
       message: 'Please enter a valid email address.',
+      error: true
+    });
+  }
+
+  if (password.length < 6) {
+    return res.render('pages/register', {
+      ...viewModel,
+      message: 'Password must be at least 6 characters long.',
       error: true
     });
   }
 
   const username = rawUsername.toLowerCase();
   const email = rawEmail.toLowerCase();
-  const hash = await bcrypt.hash(req.body.password, 10);
   const query = 'INSERT INTO users (username, email, password) VALUES ($1, $2, $3)';
   
   try {
+    const existingUser = await db.oneOrNone(
+      'SELECT username, email FROM users WHERE username = $1 OR email = $2',
+      [username, email]
+    );
+
+    if (existingUser) {
+      const conflictMessage =
+        existingUser.username === username
+          ? 'Username is already taken. Please choose another one.'
+          : 'Email is already in use. Try logging in or use a different email.';
+
+      return res.render('pages/register', {
+        ...viewModel,
+        message: conflictMessage,
+        error: true
+      });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
     await db.none(query, [username, email, hash]);
-    res.redirect('/login');
+    res.redirect('/login?registered=1');
   } catch (error) {
+    console.error('Registration error:', error);
     res.render('pages/register', { 
-      message: 'Registration failed. Username or email may already be in use.',
+      ...viewModel,
+      message: 'Registration failed. Please try again later.',
       error: true 
     });
   }
@@ -156,44 +204,104 @@ app.post('/register', async (req, res) => {
 
 
 app.get('/login', (req, res) => {
-  res.render('pages/login');
+  if (req.session.user) {
+    return res.redirect('/discover');
+  }
+
+  const { registered } = req.query;
+  const context = {};
+
+  if (registered) {
+    context.message = 'Account created successfully. Please log in.';
+    context.error = false;
+  }
+
+  res.render('pages/login', context);
 });
 
 app.post('/login', async (req, res) => {
-  const query = 'SELECT * FROM users WHERE username = $1';
-  const username = (req.body.username || '').trim().toLowerCase();
-  
-  if (!username) {
+  const rawCredential = (req.body.username || '').trim();
+  const password = req.body.password || '';
+  const viewModel = {
+    form: {
+      username: rawCredential
+    }
+  };
+
+  if (!rawCredential) {
     return res.render('pages/login', { 
-      message: 'Please enter your username.',
+      ...viewModel,
+      message: 'Please enter your username or email.',
       error: true 
     });
   }
+
+  if (!password) {
+    return res.render('pages/login', { 
+      ...viewModel,
+      message: 'Please enter your password.',
+      error: true 
+    });
+  }
+
+  const normalizedCredential = rawCredential.toLowerCase();
+  const lookupField = EMAIL_REGEX.test(rawCredential) ? 'email' : 'username';
+  const query = `SELECT id, username, email, password FROM users WHERE ${lookupField} = $1`;
   
   try {
-    const user = await db.oneOrNone(query, [username]);
+    const user = await db.oneOrNone(query, [normalizedCredential]);
     
     if (!user) {
       return res.render('pages/login', { 
-        message: 'Incorrect username or password.',
+        ...viewModel,
+        message: 'Incorrect username/email or password.',
         error: true 
       });
     }
     
-    const match = await bcrypt.compare(req.body.password, user.password);
+    const match = await bcrypt.compare(password, user.password);
     
     if (!match) {
       return res.render('pages/login', { 
-        message: 'Incorrect username or password.',
+        ...viewModel,
+        message: 'Incorrect username/email or password.',
         error: true 
       });
     }
     
-    req.session.user = user;
-    req.session.save();
-    res.redirect('/discover'); // Redirect to discover page after successful login
+    req.session.regenerate((err) => {
+      if (err) {
+        console.error('Session regeneration error:', err);
+        return res.render('pages/login', {
+          ...viewModel,
+          message: 'Unable to log in at this time. Please try again.',
+          error: true
+        });
+      }
+
+      req.session.user = {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      };
+
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error('Session save error:', saveErr);
+          return res.render('pages/login', {
+            ...viewModel,
+            message: 'Unable to log in at this time. Please try again.',
+            error: true
+          });
+        }
+
+        res.redirect('/discover'); // Redirect to discover page after successful login
+      });
+    });
   } catch (error) {
+    console.error('Login error:', error);
     res.render('pages/login', { 
+      ...viewModel,
       message: 'Login failed. Please try again.',
       error: true 
     });
@@ -290,10 +398,11 @@ app.post('/discover/search', async (req, res) => {
           if (recipeData.pricePerServing) {
             recipeData.pricePerServing = (recipeData.pricePerServing / 100).toFixed(2);
           }
+          recipeData.summary = stripHtmlTags(recipeData.summary);
           return recipeData;
         } catch (error) {
           console.error(`Error fetching recipe ${recipe.id}:`, error.message);
-          return recipe;
+          return recipe ? { ...recipe, summary: stripHtmlTags(recipe.summary) } : null;
         }
       })
     );
@@ -353,6 +462,7 @@ app.get('/discover/ingredients', async (req, res) => {
           if (recipeData.pricePerServing) {
             recipeData.pricePerServing = (recipeData.pricePerServing / 100).toFixed(2);
           }
+          recipeData.summary = stripHtmlTags(recipeData.summary);
           return recipeData;
         } catch (error) {
           console.error(`Error fetching recipe ${recipe.id}:`, error.message);
@@ -383,9 +493,12 @@ app.get('/discover/ingredients', async (req, res) => {
 // POST route to generate weekly grocery list
 app.post('/discover/grocery-list', async (req, res) => {
   try {
-    const { recipeIds } = req.body;
+    const rawRecipeIds = req.body.recipeIds;
+    const recipeIds = (Array.isArray(rawRecipeIds) ? rawRecipeIds : rawRecipeIds ? [rawRecipeIds] : [])
+      .map(id => parseInt(id, 10))
+      .filter(id => !Number.isNaN(id));
     
-    if (!recipeIds || !Array.isArray(recipeIds) || recipeIds.length === 0) {
+    if (recipeIds.length === 0) {
       return res.render('pages/discover', {
         user: req.session.user,
         results: null,
@@ -407,7 +520,9 @@ app.post('/discover/grocery-list', async (req, res) => {
               }
             }
           );
-          return response.data;
+          const recipeData = response.data;
+          recipeData.summary = stripHtmlTags(recipeData.summary);
+          return recipeData;
         } catch (error) {
           console.error(`Error fetching recipe ${id}:`, error.message);
           return null;

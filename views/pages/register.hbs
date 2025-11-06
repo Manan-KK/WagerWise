@@ -17,6 +17,7 @@
                 id="username" 
                 name="username" 
                 placeholder="Choose a username"
+                value="{{form.username}}"
                 required
                 autofocus>
             </div>
@@ -28,6 +29,7 @@
                 id="email" 
                 name="email" 
                 placeholder="you@example.com"
+                value="{{form.email}}"
                 required>
             </div>
             <div class="mb-3">
@@ -38,6 +40,7 @@
                 id="password" 
                 name="password" 
                 placeholder="Create a password"
+                minlength="6"
                 required>
             </div>
             <div class="d-grid">
