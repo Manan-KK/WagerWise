@@ -102,6 +102,8 @@ app.use(
 // *****************************************************
 
 // Authentication Middleware.
+const EMAIL_REGEX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
 const auth = (req, res, next) => {
   if (!req.session.user) {
     // Default to login page.
@@ -119,19 +121,39 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
+  const rawUsername = (req.body.username || '').trim();
+  const rawEmail = (req.body.email || '').trim();
+
+  if (!rawUsername) {
+    return res.render('pages/register', {
+      message: 'Please enter a valid username.',
+      error: true
+    });
+  }
+
+  if (!EMAIL_REGEX.test(rawEmail)) {
+    return res.render('pages/register', {
+      message: 'Please enter a valid email address.',
+      error: true
+    });
+  }
+
+  const username = rawUsername.toLowerCase();
+  const email = rawEmail.toLowerCase();
   const hash = await bcrypt.hash(req.body.password, 10);
-  const query = 'INSERT INTO users (username, password) VALUES ($1, $2)';
+  const query = 'INSERT INTO users (username, email, password) VALUES ($1, $2, $3)';
   
   try {
-    await db.none(query, [req.body.username, hash]);
+    await db.none(query, [username, email, hash]);
     res.redirect('/login');
   } catch (error) {
     res.render('pages/register', { 
-      message: 'Registration failed. Username already exists.',
+      message: 'Registration failed. Username or email may already be in use.',
       error: true 
     });
   }
 });
+
 
 app.get('/login', (req, res) => {
   res.render('pages/login');
@@ -139,9 +161,17 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
   const query = 'SELECT * FROM users WHERE username = $1';
+  const username = (req.body.username || '').trim().toLowerCase();
+  
+  if (!username) {
+    return res.render('pages/login', { 
+      message: 'Please enter your username.',
+      error: true 
+    });
+  }
   
   try {
-    const user = await db.oneOrNone(query, [req.body.username]);
+    const user = await db.oneOrNone(query, [username]);
     
     if (!user) {
       return res.render('pages/login', { 
@@ -586,4 +616,3 @@ app.post('/settings/password', async (req, res) => {
 // starting the server and keeping the connection open to listen for more requests
 app.listen(3000);
 console.log('Server is listening on port 3000');
-

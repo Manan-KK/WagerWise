@@ -18,12 +18,14 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create index on username for faster lookups
 CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
 
 -- Core recipe entity
 CREATE TABLE recipes (
@@ -42,26 +44,29 @@ CREATE UNIQUE INDEX idx_recipes_title ON recipes (title);
 CREATE TABLE ingredients (
     ingredient_id SERIAL PRIMARY KEY,
     name VARCHAR(120) NOT NULL,
-    description TEXT,
-    UNIQUE (LOWER(name))
+    description TEXT
 );
+
+CREATE UNIQUE INDEX idx_ingredients_name_lower ON ingredients ((LOWER(name)));
 
 -- Equipment catalog for reusable kitchen tools and appliances
 CREATE TABLE equipment (
     equipment_id SERIAL PRIMARY KEY,
     name VARCHAR(120) NOT NULL,
-    description TEXT,
-    UNIQUE (LOWER(name))
+    description TEXT
 );
+
+CREATE UNIQUE INDEX idx_equipment_name_lower ON equipment ((LOWER(name)));
 
 -- Measurement units allow consistent quantities across recipe ingredients
 CREATE TABLE measurement_units (
     unit_id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    abbreviation VARCHAR(12),
-    UNIQUE (LOWER(name)),
-    UNIQUE (LOWER(abbreviation))
+    abbreviation VARCHAR(12)
 );
+
+CREATE UNIQUE INDEX idx_measurement_units_name_lower ON measurement_units ((LOWER(name)));
+CREATE UNIQUE INDEX idx_measurement_units_abbr_lower ON measurement_units ((LOWER(abbreviation)));
 
 -- Junction table capturing ingredient usage per recipe
 CREATE TABLE recipe_ingredients (
@@ -93,9 +98,10 @@ CREATE INDEX idx_recipe_equipment_recipe ON recipe_equipment (recipe_id);
 CREATE TABLE time_categories (
     time_category_id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
-    description TEXT,
-    UNIQUE (LOWER(name))
+    description TEXT
 );
+
+CREATE UNIQUE INDEX idx_time_categories_name_lower ON time_categories ((LOWER(name)));
 
 -- Recipe-level timings linked to normalized categories
 CREATE TABLE recipe_times (
