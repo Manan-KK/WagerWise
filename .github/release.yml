@@ -1,0 +1,44 @@
+# .github/release.yml
+# Configuration for automatic release notes generation in BudgetBites
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - octocat
+  categories:
+    - title: Breaking Changes 🛠
+      labels:
+        - Semver-Major
+        - breaking-change
+    - title: Exciting New Features 🎉
+      labels:
+        - Semver-Minor
+        - enhancement
+        - feature
+        - new-feature
+    - title: Recipe & Meal Planning Features 🍳
+      labels:
+        - recipe
+        - meal-planning
+        - spoonacular
+        - grocery-list
+    - title: Bug Fixes 🐛
+      labels:
+        - bug
+        - bugfix
+        - fix
+    - title: UI/UX Improvements ✨
+      labels:
+        - ui
+        - ux
+        - design
+        - frontend
+    - title: Backend Improvements 🔧
+      labels:
+        - backend
+        - api
+        - database
+    - title: Other Changes
+      labels:
+        - "*"
