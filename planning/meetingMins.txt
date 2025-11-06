@@ -25,3 +25,34 @@ Session 1 10/29/2025
 BLOCKERS: 
 10/29
     -repos (TA will fix tonight)
+    Session 2 11/1/2025
+    Will: 
+    -This week: 
+        -get better outline of project 
+        -regsiter page
+        -discover page 
+        -logout page 
+    -Next week: 
+        -Css sylting on dicover page 
+    Manan:
+    -This week: 
+        -Found API
+        -Regx
+        -Add grocery list 
+    -Next week: 
+        -Fix grocery list 
+        -Add meal planning 
+    George: 
+    -This week: 
+        -code skeleton
+        -login page 
+        -implement and help frontend and front facing pages so you can add backend later
+    -Next week: 
+         -Css sylting on everything but the dicover page (home page, log out and in and register page)
+    Justin: 
+    -This week:
+        -go from lo spec to hi spec frames
+        -grocery list
+    -Next week: 
+        -Testing for impovenmts 
+        - Impoving the Discover page functionally
