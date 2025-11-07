@@ -1,0 +1,104 @@
+Week 1 Release Notes: 
+
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+
+### Exciting New Features 🎉
+* Initial release of BudgetBites - a meal planning web app for college students
+* User registration system with email validation and password requirements
+* User login system with secure session management
+* User settings page with username and password change functionality
+* Dashboard page for user overview
+* Responsive navigation bar with authentication-aware menu items
+* Logout functionality with proper session cleanup
+
+### Recipe & Meal Planning Features 🍳
+* **Spoonacular API Integration** - Full integration with Spoonacular food API for recipe discovery
+* **Complex Recipe Search** - Search recipes by name, keywords, dietary preferences, and more
+* **Ingredient-Based Search** - Find recipes based on ingredients you have available
+* **Advanced Filtering System**:
+  - Dietary preferences (vegetarian, vegan, gluten-free, ketogenic, pescetarian, paleo, primal, low-fodmap, whole30)
+  - Intolerance filtering (dairy, egg, gluten, grain, peanut, seafood, sesame, shellfish, soy, sulfite, tree-nut, wheat)
+  - Time constraints (max ready time in minutes)
+  - Calorie range filtering (min/max calories)
+  - Budget constraints (price per serving range)
+  - Customizable number of results (1-100 recipes)
+* **Recipe Information Display**:
+  - Recipe images, titles, and summaries
+  - Ready time and serving information
+  - Price per serving with proper currency formatting
+  - Nutrition information (calories, protein, carbs, fat)
+  - Direct links to full recipe instructions
+* **Weekly Grocery List Generator**:
+  - Select multiple recipes to generate a comprehensive shopping list
+  - Automatic ingredient aggregation and deduplication
+  - Ingredients organized by grocery store aisle for efficient shopping
+  - Estimated cost calculation for each ingredient and total shopping list
+  - Visual ingredient cards with images
+  - Recipe tracking showing which recipes use each ingredient
+  - Print-friendly grocery list format
+
+### Frontend Changes ✨
+* Bootstrap 5.3.3 integration for modern, responsive design
+* Discover page with comprehensive search form and results display
+* Recipe card layout with responsive grid system
+* Grocery list page with organized ingredient display
+* Login and registration pages with form validation
+* Settings page with separate forms for username and password changes
+* Dashboard page layout
+* Logout confirmation page
+* Responsive navigation bar with mobile-friendly toggle
+* Error and success message display system
+* Improved recipe card styling with badges and better information hierarchy
+
+### Backend Changes 🔧
+* Express.js server setup with proper middleware configuration
+* Express Handlebars templating engine integration
+* Session management with express-session
+* Authentication middleware for protected routes
+* Password hashing with bcryptjs (10 rounds)
+* Input validation and sanitization
+* Error handling with try-catch blocks and user-friendly error messages
+* Custom Handlebars helpers (eq, groupBy) for template logic
+* Route organization with clear separation of concerns
+
+### API & Database Changes 🗄️
+* PostgreSQL database setup with Docker integration
+* User table with username, email, password, and timestamps
+* Database indexes for optimized queries (username, email)
+* Recipe management database schema:
+  - Recipes table with metadata
+  - Ingredients catalog for reuse across recipes
+  - Equipment catalog for kitchen tools
+  - Recipe ingredients junction table
+  - Recipe equipment junction table
+  - Recipe steps and timing information
+  - Measurement units standardization
+  - Time categories for recipe organization
+* pg-promise integration for database operations
+* Spoonacular API integration:
+  - Complex recipe search endpoint
+  - Recipe information endpoint with nutrition data
+  - Ingredient-based recipe search endpoint
+  - Proper API key management
+  - Price and currency conversion (cents to dollars)
+  - Error handling for API rate limits and failures
+* Axios HTTP client for external API calls
+
+### Other Changes
+* Docker Compose configuration for development environment
+* Environment variable configuration for database and session secrets
+* Package.json with all required dependencies
+* Project structure with organized views (layouts, pages, partials)
+* README.md with project description
+* Release.yml configuration for automated release notes
+
+## New Contributors
+* @GeorgeLatham06 made their first contribution in https://github.com/Manan-KK/BudgetBites/pull/12
+* @Manan-KK - Project setup and database configuration
+* @WillGantt - Frontend pages and UI implementation
+* @jung2014 - Spoonacular API integration and grocery list features
+
+**Full Changelog**: https://github.com/Manan-KK/BudgetBites/commits/v1.0.0
