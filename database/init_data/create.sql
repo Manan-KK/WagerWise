@@ -30,15 +30,21 @@ CREATE INDEX idx_users_email ON users(email);
 -- Core recipe entity
 CREATE TABLE recipes (
     recipe_id SERIAL PRIMARY KEY,
+    spoonacular_id INTEGER UNIQUE NOT NULL,
     title VARCHAR(150) NOT NULL,
     description TEXT,
     servings INTEGER CHECK (servings > 0),
     source_url VARCHAR(255),
+    image_url TEXT,
+    ready_in_minutes INTEGER CHECK (ready_in_minutes >= 0),
+    price_per_serving NUMERIC(10, 2),
+    summary TEXT,
+    raw_data JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX idx_recipes_title ON recipes (title);
+CREATE INDEX idx_recipes_spoonacular_id ON recipes (spoonacular_id);
 
 -- Ingredient catalog kept independent for reuse across recipes
 CREATE TABLE ingredients (

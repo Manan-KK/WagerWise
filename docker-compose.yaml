@@ -4,6 +4,8 @@ services:
     env_file: .env
     expose:
       - '5432'
+    ports:
+      - '5432:5432'
     volumes:
       - budgetbites_db:/var/lib/postgresql/data
       - ./database/init_data:/docker-entrypoint-initdb.d
