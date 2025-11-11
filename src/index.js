@@ -284,6 +284,9 @@ app.use(
   })
 );
 
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
+
 // *****************************************************
 // <!-- Section 5 : API Routes -->
 // *****************************************************
