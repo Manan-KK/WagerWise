@@ -1,0 +1,64 @@
+Week 2 Release Notes: 
+
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+
+### Exciting New Features 🎉
+* **Comprehensive Testing Infrastructure** - Full test suite implementation for server-side functionality
+* **Test-Driven Development Setup** - Complete testing environment with mocking and stubbing capabilities
+
+### Backend Changes 🔧
+* **Testing Framework Integration**:
+  - Mocha test runner configuration
+  - Chai assertion library with HTTP plugin for API testing
+  - Proxyquire for module mocking and dependency injection
+  - Sinon for spies, stubs, and mocks
+  - Test environment configuration with isolated database stubs
+* **Test Coverage**:
+  - Login page rendering tests
+  - User registration route tests (success and validation scenarios)
+  - Recipe database persistence tests
+  - Database stub utilities for isolated unit testing
+* **Test Utilities**:
+  - Reusable database stub factory functions
+  - Test user builder helpers
+  - Database behavior reset utilities for test isolation
+
+### Other Changes
+* Updated release configuration - Removed `Semver-Major` label from Breaking Changes category in `.github/release.yml`
+* Package dependency updates:
+  - Added `proxyquire@^2.1.3` for module mocking
+  - Added `sinon@^21.0.0` for test doubles and spies
+  - Updated `@types/node` from 24.10.0 to 24.10.1
+* Test script configuration in `package.json`:
+  - `test` script for running Mocha test suite
+  - `testandrun` script for automated testing before server startup
+
+## Testing Details
+
+### Test Suite Structure
+* **Location**: `test/server.spec.js`
+* **Test Environment**: Isolated test environment with mocked database connections
+* **Test Categories**:
+  - Server initialization and routing tests
+  - User registration endpoint tests
+  - Recipe persistence function tests
+
+### Test Coverage Highlights
+* **Login Page**: Verifies correct rendering of login page with expected content
+* **Registration Endpoint**: 
+  - Tests successful user registration with proper redirects
+  - Validates input validation for missing username
+  - Verifies password hashing and database interaction
+* **Recipe Persistence**:
+  - Tests recipe saving to database with complete recipe data
+  - Validates handling of recipes with missing IDs
+  - Verifies proper database query execution
+
+## New Contributors
+* Testing infrastructure and test suite implementation
+
+**Full Changelog**: https://github.com/Manan-KK/BudgetBites/compare/v1.0.0...v1.1.0
+
