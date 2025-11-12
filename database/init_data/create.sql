@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS time_categories;
 DROP TABLE IF EXISTS measurement_units;
 DROP TABLE IF EXISTS equipment;
 DROP TABLE IF EXISTS ingredients;
+DROP TABLE IF EXISTS user_favorite_recipes;
 DROP TABLE IF EXISTS recipes;
 DROP TABLE IF EXISTS user_preferences;
 DROP TABLE IF EXISTS users;
@@ -60,6 +61,20 @@ CREATE TABLE recipes (
 );
 
 CREATE INDEX idx_recipes_spoonacular_id ON recipes (spoonacular_id);
+
+-- Favorites stored per user referencing recipes
+CREATE TABLE user_favorite_recipes (
+    favorite_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipe_id INTEGER NOT NULL REFERENCES recipes (recipe_id) ON DELETE CASCADE,
+    spoonacular_id INTEGER NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, spoonacular_id)
+);
+
+CREATE INDEX idx_user_favorite_recipes_user ON user_favorite_recipes (user_id);
+CREATE INDEX idx_user_favorite_recipes_recipe ON user_favorite_recipes (recipe_id);
 
 -- Ingredient catalog kept independent for reuse across recipes
 CREATE TABLE ingredients (

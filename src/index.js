@@ -57,6 +57,36 @@ Handlebars.registerHelper('groupBy', function(array, property) {
   return grouped;
 });
 
+Handlebars.registerHelper('includes', function(array, value) {
+  if (!Array.isArray(array)) {
+    return false;
+  }
+  return array.some(item => String(item) === String(value));
+});
+
+Handlebars.registerHelper('formatCurrency', function(value) {
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) {
+    return '';
+  }
+  return `$${(numericValue / 100).toFixed(2)}`;
+});
+
+Handlebars.registerHelper('formatDate', function(dateValue) {
+  if (!dateValue) {
+    return '';
+  }
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(date);
+});
+
 const stripHtmlTags = (value) => {
   if (!value || typeof value !== 'string') {
     return '';
@@ -115,6 +145,74 @@ const normalizeApiRecipe = (recipeData = {}) => {
     summary: sanitizedSummary,
     pricePerServing: normalizedPrice,
   };
+};
+
+const recipeHasIngredientCost = (recipe) => {
+  if (!recipe || !Array.isArray(recipe.extendedIngredients)) {
+    return false;
+  }
+
+  return recipe.extendedIngredients.some(ingredient => {
+    const costValue = ingredient?.estimatedCost?.value;
+    return typeof costValue === 'number' && !Number.isNaN(costValue);
+  });
+};
+
+const applyPriceBreakdownToRecipe = (recipe, priceData) => {
+  if (!recipe || !priceData) {
+    return recipe;
+  }
+
+  if (Array.isArray(recipe.extendedIngredients) && Array.isArray(priceData.ingredients)) {
+    const priceMap = new Map();
+    priceData.ingredients.forEach(item => {
+      const key = (item.name || '').trim().toLowerCase();
+      if (!key) {
+        return;
+      }
+      const numericPrice = Number(item.price);
+      if (Number.isNaN(numericPrice)) {
+        return;
+      }
+
+      priceMap.set(key, {
+        price: numericPrice,
+        amount: item.amount,
+        image: item.image
+      });
+    });
+
+    recipe.extendedIngredients = recipe.extendedIngredients.map(ingredient => {
+      if (!ingredient) {
+        return ingredient;
+      }
+
+      const key = (ingredient.name || ingredient.original || '').trim().toLowerCase();
+      const breakdown = priceMap.get(key);
+
+      if (breakdown) {
+        ingredient.estimatedCost = {
+          value: breakdown.price,
+          unit: 'US Cents',
+          amount: breakdown.amount,
+          image: breakdown.image
+        };
+      }
+
+      return ingredient;
+    });
+  }
+
+  if (typeof priceData.totalCost === 'number') {
+    recipe.totalIngredientCost = priceData.totalCost;
+  }
+
+  if (typeof priceData.totalCostPerServing === 'number') {
+    recipe.totalCostPerServing = priceData.totalCostPerServing;
+  }
+
+  recipe.priceBreakdown = priceData;
+  return recipe;
 };
 
 const saveRecipeToDatabase = async (recipe) => {
@@ -181,6 +279,39 @@ const saveRecipeToDatabase = async (recipe) => {
   return recipe;
 };
 
+const fetchRecipePriceBreakdown = async (recipeId) => {
+  if (!recipeId) {
+    return null;
+  }
+
+  try {
+    const response = await spoonacularRequest(`/recipes/${recipeId}/priceBreakdownWidget.json`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching price breakdown for recipe ${recipeId}:`, error.response?.data || error.message);
+    return null;
+  }
+};
+
+const ensureRecipeHasCostData = async (recipe) => {
+  if (!recipe || recipeHasIngredientCost(recipe)) {
+    return recipe;
+  }
+
+  try {
+    const priceData = await fetchRecipePriceBreakdown(recipe.id);
+    if (priceData) {
+      const enriched = applyPriceBreakdownToRecipe(recipe, priceData);
+      await saveRecipeToDatabase(enriched);
+      return enriched;
+    }
+  } catch (error) {
+    console.error(`Error enriching recipe ${recipe?.id} with cost data:`, error.response?.data || error.message);
+  }
+
+  return recipe;
+};
+
 const getCachedRecipesMap = async (ids = []) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     return new Map();
@@ -213,7 +344,13 @@ const fetchRecipeFromApi = async (recipeId) => {
     const response = await spoonacularRequest(`/recipes/${recipeId}/information`, {
       includeNutrition: true,
     });
-    const normalizedRecipe = normalizeApiRecipe(response.data);
+    let normalizedRecipe = normalizeApiRecipe(response.data);
+    if (normalizedRecipe) {
+      const priceData = await fetchRecipePriceBreakdown(recipeId);
+      if (priceData) {
+        normalizedRecipe = applyPriceBreakdownToRecipe(normalizedRecipe, priceData);
+      }
+    }
     if (normalizedRecipe) {
       await saveRecipeToDatabase(normalizedRecipe);
     }
@@ -241,9 +378,22 @@ const getDetailedRecipes = async (recipeIds = []) => {
     });
   }
 
-  return recipeIds
+  const orderedRecipes = recipeIds
     .map(id => cachedRecipes.get(id))
     .filter(recipe => Boolean(recipe));
+
+  const enrichedRecipes = await Promise.all(
+    orderedRecipes.map(async (recipe) => {
+      try {
+        return await ensureRecipeHasCostData(recipe);
+      } catch (error) {
+        console.error(`Error ensuring cost data for recipe ${recipe?.id}:`, error.response?.data || error.message);
+        return recipe;
+      }
+    })
+  );
+
+  return enrichedRecipes.filter(recipe => Boolean(recipe));
 };
 
 // *****************************************************
@@ -509,11 +659,160 @@ app.get('/logout', (req, res) => {
 // Authentication Required - routes below this require authentication
 app.use(auth);
 
-app.get('/discover', (req, res) => {
+const getUserFavoriteIds = async (userId) => {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    const rows = await db.any(
+      'SELECT spoonacular_id FROM user_favorite_recipes WHERE user_id = $1',
+      [userId]
+    );
+    return rows
+      .map(row => Number(row.spoonacular_id))
+      .filter(id => !Number.isNaN(id));
+  } catch (error) {
+    console.error('Error fetching favorite ids:', error);
+    return [];
+  }
+};
+
+const parseRawRecipeData = (rawValue) => {
+  if (!rawValue) {
+    return {};
+  }
+
+  if (typeof rawValue === 'object') {
+    return { ...rawValue };
+  }
+
+  if (typeof rawValue === 'string') {
+    try {
+      return JSON.parse(rawValue);
+    } catch (error) {
+      console.error('Failed to parse stored recipe data:', error.message);
+    }
+  }
+
+  return {};
+};
+
+const formatFavoriteRecipe = (row = {}) => {
+  const rawData = parseRawRecipeData(row.raw_data);
+  const formatted = {
+    ...rawData,
+    id: rawData.id || row.spoonacular_id,
+    title: rawData.title || row.title,
+    summary: rawData.summary || row.summary,
+    servings: rawData.servings || row.servings,
+    readyInMinutes: rawData.readyInMinutes || row.ready_in_minutes,
+    pricePerServing:
+      typeof rawData.pricePerServing === 'number'
+        ? rawData.pricePerServing
+        : typeof row.price_per_serving === 'number'
+          ? Number(row.price_per_serving)
+          : null,
+    image: rawData.image || row.image_url,
+    sourceUrl: rawData.sourceUrl || row.source_url,
+    totalIngredientCost: rawData.totalIngredientCost,
+    totalCostPerServing: rawData.totalCostPerServing,
+    favoritedAt: row.favorited_at
+  };
+
+  if (!formatted.extendedIngredients && rawData.extendedIngredients) {
+    formatted.extendedIngredients = rawData.extendedIngredients;
+  }
+
+  return formatted;
+};
+
+const getUserFavorites = async (userId) => {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    const rows = await db.any(
+      `SELECT 
+        f.created_at AS favorited_at,
+        r.spoonacular_id,
+        r.title,
+        r.description,
+        r.servings,
+        r.source_url,
+        r.image_url,
+        r.ready_in_minutes,
+        r.price_per_serving,
+        r.summary,
+        r.raw_data
+       FROM user_favorite_recipes f
+       JOIN recipes r ON r.recipe_id = f.recipe_id
+       WHERE f.user_id = $1
+       ORDER BY f.created_at DESC`,
+      [userId]
+    );
+
+    return rows.map(formatFavoriteRecipe);
+  } catch (error) {
+    console.error('Error fetching user favorites:', error);
+    return [];
+  }
+};
+
+const ensureRecipeRecord = async (recipeId) => {
+  if (!recipeId) {
+    return null;
+  }
+
+  let recipeRecord = await db.oneOrNone(
+    'SELECT recipe_id FROM recipes WHERE spoonacular_id = $1',
+    [recipeId]
+  );
+
+  if (recipeRecord) {
+    return recipeRecord.recipe_id;
+  }
+
+  await fetchRecipeFromApi(recipeId);
+
+  recipeRecord = await db.oneOrNone(
+    'SELECT recipe_id FROM recipes WHERE spoonacular_id = $1',
+    [recipeId]
+  );
+
+  return recipeRecord ? recipeRecord.recipe_id : null;
+};
+
+const getSafeRedirectPath = (req, fallback = '/discover') => {
+  const explicitTarget = req.body?.redirectTo || req.query?.redirectTo;
+  if (typeof explicitTarget === 'string' && explicitTarget.startsWith('/')) {
+    return explicitTarget;
+  }
+
+  const referer = req.get('referer');
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      const host = req.get('host');
+      if (refererUrl.host === host) {
+        return refererUrl.pathname + refererUrl.search;
+      }
+    } catch (error) {
+      // Ignore malformed referer headers
+    }
+  }
+
+  return fallback;
+};
+
+app.get('/discover', async (req, res) => {
+  const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
   res.render('pages/discover', { 
     user: req.session.user,
     results: null,
-    searchParams: null
+    searchParams: null,
+    favoriteRecipeIds
   });
 });
 
@@ -569,21 +868,26 @@ app.post('/discover/search', async (req, res) => {
     const preferences = await getUserPreferences(req.session.user.id);
     detailedRecipes = sortRecipesByPreferences(detailedRecipes, preferences);
 
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
+
     res.render('pages/discover', {
       user: req.session.user,
       results: detailedRecipes,
       searchParams: req.body,
       message: detailedRecipes.length > 0 ? `Found ${detailedRecipes.length} recipes!` : 'No recipes found. Try adjusting your search criteria.',
-      error: detailedRecipes.length === 0
+      error: detailedRecipes.length === 0,
+      favoriteRecipeIds
     });
   } catch (error) {
     console.error('Error searching recipes:', error.response?.data || error.message);
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
     res.render('pages/discover', {
       user: req.session.user,
       results: null,
       searchParams: req.body,
       message: 'Error searching recipes. Please try again.',
-      error: true
+      error: true,
+      favoriteRecipeIds
     });
   }
 });
@@ -608,21 +912,26 @@ app.get('/discover/ingredients', async (req, res) => {
     const preferences = await getUserPreferences(req.session.user.id);
     detailedRecipes = sortRecipesByPreferences(detailedRecipes, preferences);
 
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
+
     res.render('pages/discover', {
       user: req.session.user,
       results: detailedRecipes,
       searchParams: { ingredients: ingredients },
       message: detailedRecipes.length > 0 ? `Found ${detailedRecipes.length} recipes!` : 'No recipes found. Try different ingredients.',
-      error: detailedRecipes.length === 0
+      error: detailedRecipes.length === 0,
+      favoriteRecipeIds
     });
   } catch (error) {
     console.error('Error searching by ingredients:', error.response?.data || error.message);
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
     res.render('pages/discover', {
       user: req.session.user,
       results: null,
       searchParams: req.query,
       message: 'Error searching recipes. Please try again.',
-      error: true
+      error: true,
+      favoriteRecipeIds
     });
   }
 });
@@ -636,22 +945,26 @@ app.post('/discover/grocery-list', async (req, res) => {
       .filter(id => !Number.isNaN(id));
     
     if (recipeIds.length === 0) {
+      const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
       return res.render('pages/discover', {
         user: req.session.user,
         results: null,
         message: 'Please select at least one recipe.',
-        error: true
+        error: true,
+        favoriteRecipeIds
       });
     }
 
     let recipes = await getDetailedRecipes(recipeIds);
 
     if (recipes.length === 0) {
+      const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
       return res.render('pages/discover', {
         user: req.session.user,
         results: null,
         message: 'Unable to load the selected recipes. Please try searching again.',
-        error: true
+        error: true,
+        favoriteRecipeIds
       });
     }
 
@@ -729,17 +1042,112 @@ app.post('/discover/grocery-list', async (req, res) => {
     });
   } catch (error) {
     console.error('Error generating grocery list:', error.response?.data || error.message);
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
     res.render('pages/discover', {
       user: req.session.user,
       results: null,
       message: 'Error generating grocery list. Please try again.',
-      error: true
+      error: true,
+      favoriteRecipeIds
     });
   }
 });
 
-app.get('/dashboard', (req, res) => {
-  res.render('pages/dashboard', { user: req.session.user });
+app.post('/favorites/add', async (req, res) => {
+  const userId = req.session.user.id;
+  const recipeId = parseInt(req.body.recipeId, 10);
+  const redirectPath = getSafeRedirectPath(req, '/discover');
+
+  if (!recipeId) {
+    return res.redirect(redirectPath);
+  }
+
+  try {
+    const recipeRecordId = await ensureRecipeRecord(recipeId);
+    if (!recipeRecordId) {
+      return res.redirect(redirectPath);
+    }
+
+    await db.none(
+      `INSERT INTO user_favorite_recipes (user_id, recipe_id, spoonacular_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, spoonacular_id) DO NOTHING`,
+      [userId, recipeRecordId, recipeId]
+    );
+  } catch (error) {
+    console.error('Error saving favorite recipe:', error);
+  }
+
+  res.redirect(redirectPath);
+});
+
+app.post('/favorites/remove', async (req, res) => {
+  const userId = req.session.user.id;
+  const recipeId = parseInt(req.body.recipeId, 10);
+  const redirectPath = getSafeRedirectPath(req, '/favorites');
+
+  if (!recipeId) {
+    return res.redirect(redirectPath);
+  }
+
+  try {
+    await db.none(
+      'DELETE FROM user_favorite_recipes WHERE user_id = $1 AND spoonacular_id = $2',
+      [userId, recipeId]
+    );
+  } catch (error) {
+    console.error('Error removing favorite recipe:', error);
+  }
+
+  res.redirect(redirectPath);
+});
+
+app.get('/favorites', async (req, res) => {
+  try {
+    const favorites = await getUserFavorites(req.session.user.id);
+    res.render('pages/favorites', {
+      user: req.session.user,
+      favorites,
+      favoriteRecipeIds: favorites.map(recipe => recipe.id),
+      error: false,
+      message: favorites.length === 0 ? 'Save recipes to build your personal cookbook!' : null
+    });
+  } catch (error) {
+    console.error('Error rendering favorites page:', error);
+    res.render('pages/favorites', {
+      user: req.session.user,
+      favorites: [],
+      favoriteRecipeIds: [],
+      error: true,
+      message: 'Unable to load your favorite recipes right now. Please try again.'
+    });
+  }
+});
+
+app.get('/dashboard', async (req, res) => {
+  try {
+    const [favorites, preferences] = await Promise.all([
+      getUserFavorites(req.session.user.id),
+      getUserPreferences(req.session.user.id)
+    ]);
+
+    res.render('pages/dashboard', { 
+      user: req.session.user,
+      favoriteCount: favorites.length,
+      recentFavorites: favorites.slice(0, 3),
+      preferences
+    });
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+    res.render('pages/dashboard', { 
+      user: req.session.user,
+      favoriteCount: 0,
+      recentFavorites: [],
+      preferences: null,
+      error: true,
+      message: 'Unable to load dashboard data at this time.'
+    });
+  }
 });
 
 // Helper function to sort recipes based on user preferences

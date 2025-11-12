@@ -143,6 +143,9 @@
               {{/if}}
               <div class="card-body d-flex flex-column">
                 <h5 class="card-title">{{title}}</h5>
+                {{#if (includes ../favoriteRecipeIds id)}}
+                <span class="badge bg-warning text-dark w-auto mb-2">Favorited</span>
+                {{/if}}
 
                 <div class="form-check mb-3">
                   <input 
@@ -201,6 +204,21 @@
                 {{/if}}
 
                 <div class="mt-auto">
+                  {{#if (includes ../favoriteRecipeIds id)}}
+                  <form method="POST" action="/favorites/remove" class="mb-2">
+                    <input type="hidden" name="recipeId" value="{{id}}">
+                    <button type="submit" class="btn btn-sm btn-warning w-100">
+                      Remove from Favorites
+                    </button>
+                  </form>
+                  {{else}}
+                  <form method="POST" action="/favorites/add" class="mb-2">
+                    <input type="hidden" name="recipeId" value="{{id}}">
+                    <button type="submit" class="btn btn-sm btn-outline-warning w-100">
+                      Save to Favorites
+                    </button>
+                  </form>
+                  {{/if}}
                   <a href="{{sourceUrl}}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
                     View Full Recipe
                   </a>
