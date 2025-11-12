@@ -10,67 +10,70 @@ process.env.POSTGRES_HOST = process.env.POSTGRES_HOST || '127.0.0.1';
 
 // ********************** Import Libraries ***********************************
 
-const chai = require('chai'); // Chai HTTP provides an interface for live integration testing of the API's.
+const chai = require('chai');
 const chaiHttp = require('chai-http');
-const pgp = require('pg-promise')();
-const cleanupDb = pgp({
-  host: process.env.POSTGRES_HOST || 'db',
-  port: Number(process.env.POSTGRES_PORT) || 5432,
-  database: process.env.POSTGRES_DB,
-  user: process.env.POSTGRES_USER,
-  password: process.env.POSTGRES_PASSWORD
-});
+const proxyquire = require('proxyquire');
+const sinon = require('sinon');
 
 chai.should();
 chai.use(chaiHttp);
 const {assert, expect} = chai;
 
-const server = require('../src/index');
+const createDbStub = () => ({
+  connect: sinon.stub().callsFake(() => Promise.resolve({ done: () => {} })),
+  oneOrNone: sinon.stub().resolves(null),
+  none: sinon.stub().resolves(),
+  one: sinon.stub().resolves({ recipe_id: 1 }),
+  any: sinon.stub().resolves([])
+});
 
-const TEST_EMAIL = 'register_test_user@example.com';
+const dbStub = createDbStub();
+const serverModule = proxyquire('../src/index', {
+  'pg-promise': () => () => dbStub
+});
+const app = serverModule;
+const { saveRecipeToDatabase } = serverModule;
 
-const buildTestUser = () => {
-  const uniqueSuffix = `${Date.now()}${Math.round(Math.random() * 1000)}`;
-  return {
-    username: `testuser_${uniqueSuffix}`,
-    email: TEST_EMAIL,
-    password: 'secret1'
-  };
+const resetDbBehaviors = () => {
+  Object.values(dbStub).forEach(stub => {
+    if (stub.resetHistory) {
+      stub.resetHistory();
+    }
+  });
+
+  dbStub.oneOrNone.resolves(null);
+  dbStub.none.resolves();
+  dbStub.one.resolves({ recipe_id: 1 });
+  dbStub.any.resolves([]);
 };
 
-const deleteUser = async ({ username, email }) => {
-  await cleanupDb.none('DELETE FROM users WHERE username = $1 OR email = $2', [
-    username,
-    email || null
-  ]);
-};
+const buildTestUser = () => ({
+  username: 'TestUser',
+  email: 'register_test_user@example.com',
+  password: 'secret1'
+});
+
+beforeEach(resetDbBehaviors);
 
 // ********************** DEFAULT LOGIN PAGE TEST ****************************
 
 describe('Server!', () => {
-  it('renders the login page', done => {
-    chai
-      .request(server)
-      .get('/login')
-      .end((err, res) => {
-        expect(res).to.have.status(200);
-        assert.include(res.text, 'Welcome to BudgetBites');
-        done();
-      });
+  it('renders the login page', async () => {
+    const res = await chai.request(app).get('/login');
+
+    expect(res).to.have.status(200);
+    assert.include(res.text, 'Welcome to BudgetBites');
   });
 });
 
 // *********************** REGISTER ROUTE TESTS ******************************
 
 describe('POST /register', () => {
-  beforeEach(async () => {
-    await deleteUser({ username: '', email: TEST_EMAIL });
-  });
-
   it('redirects to the login page when a new account is created', async () => {
     const userPayload = buildTestUser();
+
     const res = await chai
-      .request(server)
+      .request(app)
       .post('/register')
       .type('form')
       .redirects(0)
@@ -78,13 +81,24 @@ describe('POST /register', () => {
 
     expect(res).to.have.status(302);
     expect(res).to.have.header('location', '/login?registered=1');
+    expect(dbStub.oneOrNone.calledOnce).to.be.true;
+    expect(dbStub.none.calledOnce).to.be.true;
 
-    await deleteUser(userPayload);
+    const existingUserArgs = dbStub.oneOrNone.getCall(0).args[1];
+    expect(existingUserArgs).to.deep.equal([
+      userPayload.username.toLowerCase(),
+      userPayload.email.toLowerCase()
+    ]);
+
+    const insertArgs = dbStub.none.getCall(0).args[1];
+    expect(insertArgs[0]).to.equal(userPayload.username.toLowerCase());
+    expect(insertArgs[1]).to.equal(userPayload.email.toLowerCase());
+    expect(insertArgs[2]).to.not.equal(userPayload.password);
   });
 
   it('returns a validation error when the username is missing', async () => {
     const res = await chai
-      .request(server)
+      .request(app)
       .post('/register')
       .type('form')
       .send({
@@ -95,9 +109,44 @@ describe('POST /register', () => {
 
     expect(res).to.have.status(200);
     expect(res.text).to.include('Please enter a valid username.');
+    expect(dbStub.oneOrNone.called).to.be.false;
+    expect(dbStub.none.called).to.be.false;
   });
 });
 
-after(() => {
-  pgp.end();
+// *********************** SAVE RECIPE TO DATABASE TESTS *********************
+
+describe('saveRecipeToDatabase', () => {
+  it('persists the recipe when an id is provided', async () => {
+    const recipe = {
+      id: 42,
+      title: 'Test Recipe',
+      summary: 'A budget friendly favorite.',
+      servings: 4,
+      sourceUrl: 'https://example.com',
+      image: 'https://example.com/image.jpg',
+      readyInMinutes: 30,
+      pricePerServing: 2.75
+    };
+
+    const result = await saveRecipeToDatabase(recipe);
+
+    expect(result).to.equal(recipe);
+    expect(dbStub.one.calledOnce).to.be.true;
+
+    const insertArgs = dbStub.one.getCall(0).args[1];
+    expect(insertArgs[0]).to.equal(recipe.id);
+    expect(insertArgs[1]).to.equal(recipe.title);
+    expect(insertArgs[2]).to.equal(recipe.summary);
+    expect(insertArgs[3]).to.equal(recipe.servings);
+    expect(insertArgs[7]).to.equal(recipe.pricePerServing);
+    expect(insertArgs[9]).to.equal(JSON.stringify(recipe));
+  });
+
+  it('returns null and skips persistence when recipe id is missing', async () => {
+    const result = await saveRecipeToDatabase({ title: 'No id recipe' });
+
+    expect(result).to.equal(null);
+    expect(dbStub.one.called).to.be.false;
+  });
 });
