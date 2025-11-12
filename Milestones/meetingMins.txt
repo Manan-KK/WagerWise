@@ -1,58 +1,131 @@
-Session 1 10/29/2025
-    Will: 
-    -This week: 
-        -Finished UML Diagram
-    -Next week: 
-        -get better outline of project 
-        -code skeleton
-    Manan:
-    -This week: 
-        -Found API
-    -Next week: 
-        -Set up database
-    George: 
-    -This week: 
-        -Drawing API connections
-    -Next week:
-        -implement and help frontend and front facing pages so you can add backend later
-    Justin: 
-    -This week:
-        -Made wireframes
-    -Next week:
-        -go from lo spec to hi spec frames
-        -grocery list
+================================================================================
+MEETING MINUTES - BudgetBites Project
+================================================================================
 
-BLOCKERS: 
-10/29
-    -repos (TA will fix tonight)
-    Session 2 11/1/2025
-    Will: 
-    -This week: 
-        -get better outline of project 
-        -regsiter page
-        -discover page 
-        -logout page 
-    -Next week: 
-        -Css sylting on dicover page 
-    Manan:
-    -This week: 
-        -Found API
-        -Regx
-        -Add grocery list 
-    -Next week: 
-        -Fix grocery list 
-        -Add meal planning 
-    George: 
-    -This week: 
-        -code skeleton
-        -login page 
-        -implement and help frontend and front facing pages so you can add backend later
-    -Next week: 
-         -Css sylting on everything but the dicover page (home page, log out and in and register page)
-    Justin: 
-    -This week:
-        -go from lo spec to hi spec frames
-        -grocery list
-    -Next week: 
-        -Testing for impovenmts 
-        - Impoving the Discover page functionally
+SESSION 1 - October 29, 2025
+================================================================================
+
+MEETING SUMMARY:
+Team meeting to establish project foundation, assign initial tasks, and set up 
+development workflow. Team discussed project scope, API integration, database 
+design, and frontend/backend architecture.
+
+DECISIONS MADE:
+1. Project structure: Frontend-first approach with backend integration later
+2. API selection: Spoonacular API chosen for recipe data
+3. Database: PostgreSQL selected for data persistence
+4. Development workflow: Agile methodology with weekly sprints
+5. Repository setup: TA to resolve repository access issues
+
+ACTION ITEMS:
+- Will:
+  * Completed: UML Diagram finished
+  * Next week: Get better outline of project, create code skeleton
+  
+- Manan:
+  * Completed: Found and evaluated Spoonacular API
+  * Next week: Set up database schema and connection
+  
+- George:
+  * Completed: Drawing API connections and integration planning
+  * Next week: Implement frontend and front-facing pages (login, register, etc.)
+  
+- Justin:
+  * Completed: Created initial wireframes
+  * Next week: Convert low-spec to high-spec wireframes, design grocery list UI
+
+FOLLOW-UP ITEMS:
+1. Repository access - TA to fix repository permissions (BLOCKER)
+2. API documentation review - Team to review Spoonacular API documentation
+3. Database schema design - Manan to draft initial database schema
+4. Wireframe review - Team to review and approve wireframes before implementation
+
+BLOCKERS:
+- Repository access issues - TA notified, expected resolution tonight
+
+================================================================================
+SESSION 2 - November 1, 2025
+================================================================================
+
+MEETING SUMMARY:
+Progress review meeting to assess completed work, address blockers, and plan 
+next sprint. Team reviewed frontend pages, API integration progress, and 
+discussed styling and functionality improvements.
+
+DECISIONS MADE:
+1. CSS styling approach: Divide styling tasks by page ownership
+2. Grocery list functionality: Prioritize fixing existing implementation
+3. Meal planning feature: Add to next sprint after grocery list is stable
+4. Testing strategy: Begin testing improvements and functional enhancements
+
+ACTION ITEMS:
+- Will:
+  * This week: Get better outline of project, register page, discover page, logout page
+  * Next week: CSS styling on discover page
+  
+- Manan:
+  * This week: API integration, regex validation, add grocery list functionality
+  * Next week: Fix grocery list issues, add meal planning feature
+  
+- George:
+  * This week: Code skeleton, login page, implement frontend and front-facing pages
+  * Next week: CSS styling on all pages except discover page (home, login, logout, register)
+  
+- Justin:
+  * This week: Convert low-spec to high-spec wireframes, grocery list design
+  * Next week: Testing for improvements, improving Discover page functionality
+
+FOLLOW-UP ITEMS:
+1. Grocery list bug fixes - Manan to investigate and resolve issues
+2. Meal planning feature - Design and implement meal planning functionality
+3. CSS consistency - Ensure consistent styling across all pages
+4. Discover page enhancements - Improve functionality and user experience
+5. Testing framework - Set up testing infrastructure for quality assurance
+
+BLOCKERS:
+- None identified in this session
+
+================================================================================
+SESSION 3 - November 12, 2025
+================================================================================
+
+MEETING SUMMARY:
+Feature implementation and UI enhancement meeting. Team reviewed completed 
+features including personal preferences system, discussed UI/UX improvements, 
+and planned next phase of development. Focus on user customization features 
+and professional design implementation.
+
+DECISIONS MADE:
+1. Personal preferences feature: Implement user-customizable meal sorting preferences
+2. Color scheme update: Adopt professional blue and grey color palette
+3. Database schema: Add user_preferences table to support customization features
+4. Settings page enhancement: Expand settings to include meal planning preferences
+5. CSS architecture: Implement cache-busting for better version control
+
+ACTION ITEMS:
+- Will:
+  * This week: Review and test personal preferences feature
+  * Next week: Continue discover page enhancements and testing
+  
+- Manan:
+  * This week: Database schema updates for user preferences, meal planning features
+  * Next week: Additional meal planning functionality, database optimizations
+  
+- George:
+  * This week: Implement personal preferences UI and backend, update CSS color scheme
+  * Next week: Additional UI improvements, feature testing and refinement
+  
+- Justin:
+  * This week: Test personal preferences feature, UI/UX testing
+  * Next week: Comprehensive testing suite, user experience improvements
+
+FOLLOW-UP ITEMS:
+1. Personal preferences feature - Complete implementation and testing (COMPLETED)
+2. Color scheme update - Professional blue/grey theme implementation (COMPLETED)
+3. Database migration - Ensure user_preferences table is properly deployed
+4. Feature documentation - Document new preferences feature for users
+5. Testing coverage - Expand test suite for new features
+6. User feedback - Gather feedback on preferences and color scheme
+
+BLOCKERS:
+- None identified in this session
