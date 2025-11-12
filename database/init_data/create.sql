@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS measurement_units;
 DROP TABLE IF EXISTS equipment;
 DROP TABLE IF EXISTS ingredients;
 DROP TABLE IF EXISTS recipes;
+DROP TABLE IF EXISTS user_preferences;
 DROP TABLE IF EXISTS users;
 
 -- Create users table
@@ -26,6 +27,20 @@ CREATE TABLE users (
 -- Create index on username for faster lookups
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
+
+-- User preferences for meal sorting and planning
+CREATE TABLE user_preferences (
+    preference_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sort_by VARCHAR(50) DEFAULT 'relevance',
+    sort_order VARCHAR(10) DEFAULT 'asc',
+    priority_factors JSONB DEFAULT '{"price": 1, "time": 1, "calories": 1, "health": 1}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id)
+);
+
+CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
 
 -- Core recipe entity
 CREATE TABLE recipes (

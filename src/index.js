@@ -563,7 +563,11 @@ app.post('/discover/search', async (req, res) => {
     const searchResults = response.data.results || [];
     const recipeIds = searchResults.map(recipe => recipe.id).filter(id => !!id);
     const limitedRecipeIds = recipeIds.slice(0, 20);
-    const detailedRecipes = await getDetailedRecipes(limitedRecipeIds);
+    let detailedRecipes = await getDetailedRecipes(limitedRecipeIds);
+
+    // Get user preferences and sort recipes
+    const preferences = await getUserPreferences(req.session.user.id);
+    detailedRecipes = sortRecipesByPreferences(detailedRecipes, preferences);
 
     res.render('pages/discover', {
       user: req.session.user,
@@ -598,7 +602,11 @@ app.get('/discover/ingredients', async (req, res) => {
     const response = await spoonacularRequest('/recipes/findByIngredients', params);
     const recipes = response.data || [];
     const recipeIds = recipes.map(recipe => recipe.id).filter(id => !!id);
-    const detailedRecipes = await getDetailedRecipes(recipeIds.slice(0, 20));
+    let detailedRecipes = await getDetailedRecipes(recipeIds.slice(0, 20));
+
+    // Get user preferences and sort recipes
+    const preferences = await getUserPreferences(req.session.user.id);
+    detailedRecipes = sortRecipesByPreferences(detailedRecipes, preferences);
 
     res.render('pages/discover', {
       user: req.session.user,
@@ -636,7 +644,7 @@ app.post('/discover/grocery-list', async (req, res) => {
       });
     }
 
-    const recipes = await getDetailedRecipes(recipeIds);
+    let recipes = await getDetailedRecipes(recipeIds);
 
     if (recipes.length === 0) {
       return res.render('pages/discover', {
@@ -646,6 +654,10 @@ app.post('/discover/grocery-list', async (req, res) => {
         error: true
       });
     }
+
+    // Get user preferences and sort recipes before generating grocery list
+    const preferences = await getUserPreferences(req.session.user.id);
+    recipes = sortRecipesByPreferences(recipes, preferences);
 
     // Aggregate ingredients from all recipes
     const ingredientMap = new Map();
@@ -730,18 +742,171 @@ app.get('/dashboard', (req, res) => {
   res.render('pages/dashboard', { user: req.session.user });
 });
 
-app.get('/settings', (req, res) => {
-  res.render('pages/settings', { user: req.session.user });
+// Helper function to sort recipes based on user preferences
+const sortRecipesByPreferences = (recipes, preferences) => {
+  if (!recipes || recipes.length === 0) return recipes;
+  if (!preferences) return recipes;
+
+  const sorted = [...recipes];
+
+  // Calculate a score for each recipe based on priority factors
+  const calculateScore = (recipe) => {
+    const factors = preferences.priority_factors || { price: 1, time: 1, calories: 1, health: 1 };
+    let score = 0;
+
+    // Price factor (lower is better, so we invert)
+    if (recipe.pricePerServing && factors.price) {
+      score += (100 - (recipe.pricePerServing * 10)) * factors.price;
+    }
+
+    // Time factor (lower is better, so we invert)
+    if (recipe.readyInMinutes && factors.time) {
+      score += (100 - recipe.readyInMinutes) * factors.time;
+    }
+
+    // Calories factor (can be high or low depending on preference)
+    if (recipe.nutrition?.nutrients) {
+      const calories = recipe.nutrition.nutrients.find(n => n.name === 'Calories');
+      if (calories && factors.calories) {
+        score += (calories.amount / 10) * factors.calories;
+      }
+    }
+
+    // Health score (if available from API)
+    if (recipe.healthScore && factors.health) {
+      score += recipe.healthScore * factors.health;
+    }
+
+    return score;
+  };
+
+  // Sort based on the selected criteria
+  const sortBy = preferences.sort_by || 'relevance';
+  const sortOrder = preferences.sort_order || 'asc';
+  const isAscending = sortOrder === 'asc';
+
+  sorted.sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortBy) {
+      case 'price':
+        const priceA = a.pricePerServing || Infinity;
+        const priceB = b.pricePerServing || Infinity;
+        comparison = priceA - priceB;
+        break;
+
+      case 'time':
+        const timeA = a.readyInMinutes || Infinity;
+        const timeB = b.readyInMinutes || Infinity;
+        comparison = timeA - timeB;
+        break;
+
+      case 'calories':
+        const calA = a.nutrition?.nutrients?.find(n => n.name === 'Calories')?.amount || 0;
+        const calB = b.nutrition?.nutrients?.find(n => n.name === 'Calories')?.amount || 0;
+        comparison = calA - calB;
+        break;
+
+      case 'health':
+        const healthA = a.healthScore || 0;
+        const healthB = b.healthScore || 0;
+        comparison = healthB - healthA; // Higher is better
+        break;
+
+      case 'popularity':
+        const popA = a.aggregateLikes || 0;
+        const popB = b.aggregateLikes || 0;
+        comparison = popB - popA; // Higher is better
+        break;
+
+      case 'relevance':
+      default:
+        // Use calculated score for relevance
+        comparison = calculateScore(b) - calculateScore(a);
+        break;
+    }
+
+    return isAscending ? comparison : -comparison;
+  });
+
+  return sorted;
+};
+
+// Helper function to get user preferences
+const getUserPreferences = async (userId) => {
+  try {
+    const prefs = await db.oneOrNone(
+      'SELECT * FROM user_preferences WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (!prefs) {
+      // Return default preferences
+      return {
+        sort_by: 'relevance',
+        sort_order: 'asc',
+        priority_factors: { price: 1, time: 1, calories: 1, health: 1 }
+      };
+    }
+    
+    return {
+      sort_by: prefs.sort_by || 'relevance',
+      sort_order: prefs.sort_order || 'asc',
+      priority_factors: prefs.priority_factors || { price: 1, time: 1, calories: 1, health: 1 }
+    };
+  } catch (error) {
+    console.error('Error getting user preferences:', error);
+    return {
+      sort_by: 'relevance',
+      sort_order: 'asc',
+      priority_factors: { price: 1, time: 1, calories: 1, health: 1 }
+    };
+  }
+};
+
+// Helper function to save/update user preferences
+const saveUserPreferences = async (userId, preferences) => {
+  try {
+    await db.none(
+      `INSERT INTO user_preferences (user_id, sort_by, sort_order, priority_factors, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         sort_by = EXCLUDED.sort_by,
+         sort_order = EXCLUDED.sort_order,
+         priority_factors = EXCLUDED.priority_factors,
+         updated_at = NOW()`,
+      [
+        userId,
+        preferences.sort_by || 'relevance',
+        preferences.sort_order || 'asc',
+        JSON.stringify(preferences.priority_factors || { price: 1, time: 1, calories: 1, health: 1 })
+      ]
+    );
+    return true;
+  } catch (error) {
+    console.error('Error saving user preferences:', error);
+    return false;
+  }
+};
+
+app.get('/settings', async (req, res) => {
+  const preferences = await getUserPreferences(req.session.user.id);
+  res.render('pages/settings', { 
+    user: req.session.user,
+    preferences: preferences
+  });
 });
 
 app.post('/settings/username', async (req, res) => {
   const userId = req.session.user.id;
   const newUsername = req.body.username.trim();
+  const preferences = await getUserPreferences(userId);
   
   // Check if username is provided
   if (!newUsername) {
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Username cannot be empty.',
       error: true
     });
@@ -751,6 +916,7 @@ app.post('/settings/username', async (req, res) => {
   if (newUsername === req.session.user.username) {
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'New username must be different from current username.',
       error: true
     });
@@ -762,6 +928,7 @@ app.post('/settings/username', async (req, res) => {
     if (existingUser) {
       return res.render('pages/settings', {
         user: req.session.user,
+        preferences: preferences,
         message: 'Username already exists. Please choose a different username.',
         error: true
       });
@@ -776,12 +943,14 @@ app.post('/settings/username', async (req, res) => {
     
     res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Username updated successfully!',
       error: false
     });
   } catch (error) {
     res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Failed to update username. Please try again.',
       error: true
     });
@@ -796,24 +965,30 @@ app.post('/settings/password', async (req, res) => {
   
   // Validate passwords
   if (!currentPassword || !newPassword || !confirmPassword) {
+    const preferences = await getUserPreferences(userId);
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'All password fields are required.',
       error: true
     });
   }
   
   if (newPassword !== confirmPassword) {
+    const preferences = await getUserPreferences(userId);
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'New passwords do not match.',
       error: true
     });
   }
   
   if (newPassword.length < 6) {
+    const preferences = await getUserPreferences(userId);
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Password must be at least 6 characters long.',
       error: true
     });
@@ -826,8 +1001,10 @@ app.post('/settings/password', async (req, res) => {
     // Verify current password
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) {
+      const preferences = await getUserPreferences(userId);
       return res.render('pages/settings', {
         user: req.session.user,
+        preferences: preferences,
         message: 'Current password is incorrect.',
         error: true
       });
@@ -839,15 +1016,65 @@ app.post('/settings/password', async (req, res) => {
     // Update password
     await db.none('UPDATE users SET password = $1 WHERE id = $2', [hash, userId]);
     
+    const preferences = await getUserPreferences(userId);
     res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Password updated successfully!',
       error: false
     });
   } catch (error) {
+    const preferences = await getUserPreferences(userId);
     res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Failed to update password. Please try again.',
+      error: true
+    });
+  }
+});
+
+app.post('/settings/preferences', async (req, res) => {
+  const userId = req.session.user.id;
+  const { sort_by, sort_order, price_priority, time_priority, calories_priority, health_priority } = req.body;
+  
+  try {
+    const preferences = {
+      sort_by: sort_by || 'relevance',
+      sort_order: sort_order || 'asc',
+      priority_factors: {
+        price: parseFloat(price_priority) || 1,
+        time: parseFloat(time_priority) || 1,
+        calories: parseFloat(calories_priority) || 1,
+        health: parseFloat(health_priority) || 1
+      }
+    };
+    
+    const success = await saveUserPreferences(userId, preferences);
+    
+    if (success) {
+      res.render('pages/settings', {
+        user: req.session.user,
+        preferences: preferences,
+        message: 'Meal sorting preferences updated successfully!',
+        error: false
+      });
+    } else {
+      const currentPrefs = await getUserPreferences(userId);
+      res.render('pages/settings', {
+        user: req.session.user,
+        preferences: currentPrefs,
+        message: 'Failed to update preferences. Please try again.',
+        error: true
+      });
+    }
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    const currentPrefs = await getUserPreferences(userId);
+    res.render('pages/settings', {
+      user: req.session.user,
+      preferences: currentPrefs,
+      message: 'Failed to update preferences. Please try again.',
       error: true
     });
   }
