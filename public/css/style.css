@@ -1,14 +1,19 @@
 /* BudgetBites - Custom Styles */
 
 :root {
-  --primary-color: #2c5530;
-  --primary-dark: #1e3a21;
-  --primary-light: #4a7c4f;
-  --secondary-color: #f4a261;
-  --accent-color: #e76f51;
-  --background-color: #f8f9fa;
+  --primary-color: #2563eb;
+  --primary-dark: #1e40af;
+  --primary-light: #3b82f6;
+  --secondary-color: #64748b;
+  --accent-color: #0ea5e9;
+  --background-color: #f8fafc;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --grey-light: #e2e8f0;
+  --grey-medium: #cbd5e1;
+  --grey-dark: #475569;
   --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --card-shadow-hover: 0 4px 16px rgba(37, 99, 235, 0.15);
   --border-radius: 12px;
   --transition: all 0.3s ease;
 }
@@ -17,7 +22,7 @@
 body {
   background-color: var(--background-color);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  color: #333;
+  color: var(--text-primary);
   line-height: 1.6;
 }
 
@@ -42,7 +47,7 @@ body {
 }
 
 .nav-link {
-  color: #555 !important;
+  color: var(--text-secondary) !important;
   font-weight: 500;
   transition: var(--transition);
   padding: 0.5rem 1rem !important;
@@ -51,7 +56,7 @@ body {
 
 .nav-link:hover {
   color: var(--primary-color) !important;
-  background-color: rgba(44, 85, 48, 0.1);
+  background-color: rgba(37, 99, 235, 0.1);
 }
 
 /* Card Enhancements */
@@ -94,7 +99,7 @@ body {
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(44, 85, 48, 0.3);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
 }
 
 .btn-success {
@@ -127,7 +132,7 @@ body {
 .form-control,
 .form-select {
   border-radius: 8px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--grey-medium);
   padding: 0.75rem;
   transition: var(--transition);
 }
@@ -135,12 +140,12 @@ body {
 .form-control:focus,
 .form-select:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(44, 85, 48, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
 }
 
 .form-label {
   font-weight: 600;
-  color: #555;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
@@ -209,7 +214,7 @@ body {
 }
 
 .aisle-header {
-  background-color: var(--primary-light);
+  background-color: var(--secondary-color);
   color: white;
   padding: 0.75rem 1rem;
   border-radius: 8px 8px 0 0;
@@ -219,12 +224,12 @@ body {
 
 .ingredient-item {
   padding: 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--grey-light);
   transition: var(--transition);
 }
 
 .ingredient-item:hover {
-  background-color: #f8f9fa;
+  background-color: var(--background-color);
 }
 
 .ingredient-item:last-child {
@@ -236,7 +241,7 @@ footer {
   margin-top: auto;
   padding: 2rem 0;
   background-color: white;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--grey-light);
 }
 
 /* Utility Classes */
@@ -285,7 +290,7 @@ footer {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary-light);
+  background: var(--secondary-color);
   border-radius: 5px;
 }
 
@@ -317,13 +322,13 @@ footer {
 
 .form-check-input:focus {
   border-color: var(--primary-light);
-  box-shadow: 0 0 0 0.2rem rgba(44, 85, 48, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
 }
 
 /* Recipe Summary Scroll */
 .card-text {
   scrollbar-width: thin;
-  scrollbar-color: var(--primary-light) #f1f1f1;
+  scrollbar-color: var(--secondary-color) #f1f1f1;
 }
 
 /* Settings Page */
@@ -335,7 +340,7 @@ footer {
   color: var(--primary-color);
   margin-bottom: 1.5rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid var(--primary-light);
+  border-bottom: 2px solid var(--grey-medium);
 }
 
 /* Dashboard Styles */
