@@ -11,7 +11,9 @@ DROP TABLE IF EXISTS time_categories;
 DROP TABLE IF EXISTS measurement_units;
 DROP TABLE IF EXISTS equipment;
 DROP TABLE IF EXISTS ingredients;
+DROP TABLE IF EXISTS user_favorite_recipes;
 DROP TABLE IF EXISTS recipes;
+DROP TABLE IF EXISTS user_preferences;
 DROP TABLE IF EXISTS users;
 
 -- Create users table
@@ -27,18 +29,52 @@ CREATE TABLE users (
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_email ON users(email);
 
+-- User preferences for meal sorting and planning
+CREATE TABLE user_preferences (
+    preference_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sort_by VARCHAR(50) DEFAULT 'relevance',
+    sort_order VARCHAR(10) DEFAULT 'asc',
+    priority_factors JSONB DEFAULT '{"price": 1, "time": 1, "calories": 1, "health": 1}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id)
+);
+
+CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
+
 -- Core recipe entity
 CREATE TABLE recipes (
     recipe_id SERIAL PRIMARY KEY,
+    spoonacular_id INTEGER UNIQUE NOT NULL,
     title VARCHAR(150) NOT NULL,
     description TEXT,
     servings INTEGER CHECK (servings > 0),
     source_url VARCHAR(255),
+    image_url TEXT,
+    ready_in_minutes INTEGER CHECK (ready_in_minutes >= 0),
+    price_per_serving NUMERIC(10, 2),
+    summary TEXT,
+    raw_data JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX idx_recipes_title ON recipes (title);
+CREATE INDEX idx_recipes_spoonacular_id ON recipes (spoonacular_id);
+
+-- Favorites stored per user referencing recipes
+CREATE TABLE user_favorite_recipes (
+    favorite_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipe_id INTEGER NOT NULL REFERENCES recipes (recipe_id) ON DELETE CASCADE,
+    spoonacular_id INTEGER NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, spoonacular_id)
+);
+
+CREATE INDEX idx_user_favorite_recipes_user ON user_favorite_recipes (user_id);
+CREATE INDEX idx_user_favorite_recipes_recipe ON user_favorite_recipes (recipe_id);
 
 -- Ingredient catalog kept independent for reuse across recipes
 CREATE TABLE ingredients (

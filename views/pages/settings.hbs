@@ -37,7 +37,7 @@
           <hr class="my-4">
           
           <!-- Update Password Form -->
-          <div>
+          <div class="mb-5">
             <h4 class="mb-3">Change Password</h4>
             <form action="/settings/password" method="POST">
               <div class="mb-3">
@@ -71,6 +71,118 @@
                   required>
               </div>
               <button type="submit" class="btn btn-primary">Update Password</button>
+            </form>
+          </div>
+
+          <hr class="my-4">
+
+          <!-- Meal Sorting Preferences -->
+          <div>
+            <h4 class="mb-3">Meal Sorting Preferences</h4>
+            <p class="text-muted mb-4">Customize how recipes are sorted and prioritized for your weekly meal plans</p>
+            <form action="/settings/preferences" method="POST">
+              <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                  <label for="sort_by" class="form-label">Sort By</label>
+                  <select class="form-select" id="sort_by" name="sort_by" required>
+                    <option value="relevance" {{#if (eq preferences.sort_by 'relevance')}}selected{{/if}}>Relevance</option>
+                    <option value="price" {{#if (eq preferences.sort_by 'price')}}selected{{/if}}>Price (per serving)</option>
+                    <option value="time" {{#if (eq preferences.sort_by 'time')}}selected{{/if}}>Ready Time</option>
+                    <option value="calories" {{#if (eq preferences.sort_by 'calories')}}selected{{/if}}>Calories</option>
+                    <option value="health" {{#if (eq preferences.sort_by 'health')}}selected{{/if}}>Health Score</option>
+                    <option value="popularity" {{#if (eq preferences.sort_by 'popularity')}}selected{{/if}}>Popularity</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="sort_order" class="form-label">Sort Order</label>
+                  <select class="form-select" id="sort_order" name="sort_order" required>
+                    <option value="asc" {{#if (eq preferences.sort_order 'asc')}}selected{{/if}}>Ascending (Low to High)</option>
+                    <option value="desc" {{#if (eq preferences.sort_order 'desc')}}selected{{/if}}>Descending (High to Low)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label class="form-label mb-3">Priority Factors (1-10 scale)</label>
+                <p class="text-muted small mb-3">Adjust the importance of each factor when generating meal plans. Higher values = more important.</p>
+                
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label for="price_priority" class="form-label">Price Priority</label>
+                    <input 
+                      type="range" 
+                      class="form-range" 
+                      id="price_priority" 
+                      name="price_priority" 
+                      min="1" 
+                      max="10" 
+                      step="1"
+                      value="{{preferences.priority_factors.price}}"
+                      oninput="document.getElementById('price_value').textContent = this.value">
+                    <div class="d-flex justify-content-between">
+                      <small class="text-muted">Low</small>
+                      <span id="price_value" class="fw-bold">{{preferences.priority_factors.price}}</span>
+                      <small class="text-muted">High</small>
+                    </div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="time_priority" class="form-label">Time Priority</label>
+                    <input 
+                      type="range" 
+                      class="form-range" 
+                      id="time_priority" 
+                      name="time_priority" 
+                      min="1" 
+                      max="10" 
+                      step="1"
+                      value="{{preferences.priority_factors.time}}"
+                      oninput="document.getElementById('time_value').textContent = this.value">
+                    <div class="d-flex justify-content-between">
+                      <small class="text-muted">Low</small>
+                      <span id="time_value" class="fw-bold">{{preferences.priority_factors.time}}</span>
+                      <small class="text-muted">High</small>
+                    </div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="calories_priority" class="form-label">Calories Priority</label>
+                    <input 
+                      type="range" 
+                      class="form-range" 
+                      id="calories_priority" 
+                      name="calories_priority" 
+                      min="1" 
+                      max="10" 
+                      step="1"
+                      value="{{preferences.priority_factors.calories}}"
+                      oninput="document.getElementById('calories_value').textContent = this.value">
+                    <div class="d-flex justify-content-between">
+                      <small class="text-muted">Low</small>
+                      <span id="calories_value" class="fw-bold">{{preferences.priority_factors.calories}}</span>
+                      <small class="text-muted">High</small>
+                    </div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label for="health_priority" class="form-label">Health Priority</label>
+                    <input 
+                      type="range" 
+                      class="form-range" 
+                      id="health_priority" 
+                      name="health_priority" 
+                      min="1" 
+                      max="10" 
+                      step="1"
+                      value="{{preferences.priority_factors.health}}"
+                      oninput="document.getElementById('health_value').textContent = this.value">
+                    <div class="d-flex justify-content-between">
+                      <small class="text-muted">Low</small>
+                      <span id="health_value" class="fw-bold">{{preferences.priority_factors.health}}</span>
+                      <small class="text-muted">High</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Save Preferences</button>
             </form>
           </div>
         </div>
