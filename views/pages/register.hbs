@@ -1,58 +1,170 @@
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card shadow">
-        <div class="card-body p-5">
-          <h2 class="card-title text-center mb-4">Create Account</h2>
-          <p class="text-center text-muted mb-4">Join BudgetBites to start planning affordable meals</p>
-          
-          {{> message}}
-          
-          <form action="/register" method="POST">
-            <div class="mb-3">
-              <label for="username" class="form-label">Username</label>
-              <input 
-                type="text" 
-                class="form-control" 
-                id="username" 
-                name="username" 
-                placeholder="Choose a username"
-                value="{{form.username}}"
-                required
-                autofocus>
+<div class="register-page bg-body-tertiary py-5">
+  <div class="container">
+    <div class="row justify-content-center align-items-center g-5">
+      <div class="col-12 col-lg-5">
+        <section class="register-hero card border-0 shadow-lg h-100">
+          <div class="card-body p-5">
+            <span class="badge text-bg-primary-subtle text-primary-emphasis text-uppercase fw-semibold mb-3">BudgetBites</span>
+            <h1 class="display-6 fw-bold text-dark mb-3">Sign up and start planning smarter meals.</h1>
+            <p class="text-muted mb-4">Get access to curated recipes, adaptive grocery lists, and budgeting tools built for busy students.</p>
+            <ul class="list-unstyled d-flex flex-column gap-3 text-muted mb-4">
+              <li class="d-flex align-items-center">
+                <span class="register-icon me-3 text-primary bg-primary-subtle"><i class="bi bi-graph-up"></i></span>
+                <span>Track your spending and keep every week on budget.</span>
+              </li>
+              <li class="d-flex align-items-center">
+                <span class="register-icon me-3 text-success bg-success-subtle"><i class="bi bi-nutrition"></i></span>
+                <span>Personalized nutrition profiles for your dietary goals.</span>
+              </li>
+              <li class="d-flex align-items-center">
+                <span class="register-icon me-3 text-warning bg-warning-subtle"><i class="bi bi-lightning-charge"></i></span>
+                <span>Quick meal plans tailored to your schedule.</span>
+              </li>
+            </ul>
+            <div class="register-cta border-top pt-4">
+              <p class="fw-semibold text-dark mb-2">Already part of the community?</p>
+              <a href="/login" class="btn btn-outline-primary btn-lg w-100">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Log in instead
+              </a>
             </div>
-            <div class="mb-3">
-              <label for="email" class="form-label">Email</label>
-              <input 
-                type="email" 
-                class="form-control" 
-                id="email" 
-                name="email" 
-                placeholder="you@example.com"
-                value="{{form.email}}"
-                required>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-12 col-lg-5">
+        <div class="register-form card border-0 shadow-lg">
+          <div class="card-body p-5">
+            <h2 class="fw-semibold text-dark mb-2 text-center">Create your free account</h2>
+            <p class="text-muted text-center mb-4">Join thousands of students cooking better on a budget.</p>
+
+            {{> message}}
+
+            <form action="/register" method="POST" class="row gy-3">
+              <div class="col-12">
+                <label for="username" class="form-label">Username</label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text bg-transparent border-end-0">
+                    <i class="bi bi-person-circle text-primary"></i>
+                  </span>
+                  <input 
+                    type="text" 
+                    class="form-control border-start-0 ps-0" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Choose a username"
+                    value="{{form.username}}"
+                    required
+                    autofocus>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label for="email" class="form-label">Email</label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text bg-transparent border-end-0">
+                    <i class="bi bi-envelope-open text-success"></i>
+                  </span>
+                  <input 
+                    type="email" 
+                    class="form-control border-start-0 ps-0" 
+                    id="email" 
+                    name="email" 
+                    placeholder="you@example.com"
+                    value="{{form.email}}"
+                    required>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label for="password" class="form-label">Password</label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text bg-transparent border-end-0">
+                    <i class="bi bi-shield-lock text-warning"></i>
+                  </span>
+                  <input 
+                    type="password" 
+                    class="form-control border-start-0 ps-0" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Create a password"
+                    minlength="6"
+                    required>
+                </div>
+                <small class="text-muted d-block mt-2">Use 6+ characters with a mix of letters and numbers.</small>
+              </div>
+
+              <div class="col-12">
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                    <i class="bi bi-stars me-2"></i>Register
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <div class="text-center mt-4">
+              <p class="mb-0 text-muted">Already have an account? <a href="/login">Login here</a></p>
             </div>
-            <div class="mb-3">
-              <label for="password" class="form-label">Password</label>
-              <input 
-                type="password" 
-                class="form-control" 
-                id="password" 
-                name="password" 
-                placeholder="Create a password"
-                minlength="6"
-                required>
-            </div>
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary btn-lg">Register</button>
-            </div>
-          </form>
-          
-          <div class="text-center mt-4">
-            <p class="mb-0">Already have an account? <a href="/login">Login here</a></p>
           </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  .register-page {
+    min-height: calc(100vh - 120px);
+    background: linear-gradient(180deg, rgba(118, 75, 162, 0.08) 0%, rgba(102, 126, 234, 0.08) 40%, rgba(255, 255, 255, 0.85) 100%);
+  }
+
+  .register-hero {
+    background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.92) 60%, rgba(255, 244, 231, 0.9) 100%);
+    border-radius: 2rem;
+  }
+
+  .register-form {
+    border-radius: 2rem;
+  }
+
+  .register-form .form-label {
+    font-weight: 600;
+    color: #1f2933;
+  }
+
+  .register-form .form-control,
+  .register-form .input-group-text {
+    border-radius: 1rem;
+  }
+
+  .register-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    font-size: 1.25rem;
+  }
+
+  .register-cta {
+    border-color: rgba(148, 163, 184, 0.35) !important;
+  }
+
+  @media (max-width: 991.98px) {
+    .register-hero {
+      text-align: center;
+    }
+
+    .register-hero ul {
+      align-items: center;
+    }
+
+    .register-hero li {
+      justify-content: center;
+    }
+
+    .register-icon {
+      margin-right: 0 !important;
+    }
+  }
+</style>
