@@ -4,26 +4,26 @@
       <div class="col-12 col-lg-5">
         <section class="register-hero card border-0 shadow-lg h-100">
           <div class="card-body p-5">
-            <span class="badge text-bg-primary-subtle text-primary-emphasis text-uppercase fw-semibold mb-3">BudgetBites</span>
+            <span class="badge text-bg-success-subtle text-success-emphasis text-uppercase fw-semibold mb-3">BudgetBites</span>
             <h1 class="display-6 fw-bold text-dark mb-3">Sign up and start planning smarter meals.</h1>
             <p class="text-muted mb-4">Get access to curated recipes, adaptive grocery lists, and budgeting tools built for busy students.</p>
             <ul class="list-unstyled d-flex flex-column gap-3 text-muted mb-4">
               <li class="d-flex align-items-center">
-                <span class="register-icon me-3 text-primary bg-primary-subtle"><i class="bi bi-graph-up"></i></span>
+                <span class="register-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-graph-up"></i></span>
                 <span>Track your spending and keep every week on budget.</span>
               </li>
               <li class="d-flex align-items-center">
-                <span class="register-icon me-3 text-success bg-success-subtle"><i class="bi bi-nutrition"></i></span>
+                <span class="register-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-nutrition"></i></span>
                 <span>Personalized nutrition profiles for your dietary goals.</span>
               </li>
               <li class="d-flex align-items-center">
-                <span class="register-icon me-3 text-warning bg-warning-subtle"><i class="bi bi-lightning-charge"></i></span>
+                <span class="register-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-lightning-charge"></i></span>
                 <span>Quick meal plans tailored to your schedule.</span>
               </li>
             </ul>
             <div class="register-cta border-top pt-4">
               <p class="fw-semibold text-dark mb-2">Already part of the community?</p>
-              <a href="/login" class="btn btn-outline-primary btn-lg w-100">
+              <a href="/login" class="btn btn-outline-success btn-lg w-100">
                 <i class="bi bi-box-arrow-in-right me-2"></i>Log in instead
               </a>
             </div>
@@ -44,7 +44,7 @@
                 <label for="username" class="form-label">Username</label>
                 <div class="input-group input-group-lg">
                   <span class="input-group-text bg-transparent border-end-0">
-                    <i class="bi bi-person-circle text-primary"></i>
+                    <i class="bi bi-person-circle text-success"></i>
                   </span>
                   <input 
                     type="text" 
@@ -79,7 +79,7 @@
                 <label for="password" class="form-label">Password</label>
                 <div class="input-group input-group-lg">
                   <span class="input-group-text bg-transparent border-end-0">
-                    <i class="bi bi-shield-lock text-warning"></i>
+                    <i class="bi bi-shield-lock text-success"></i>
                   </span>
                   <input 
                     type="password" 
@@ -95,7 +95,7 @@
 
               <div class="col-12">
                 <div class="d-grid">
-                  <button type="submit" class="btn btn-primary btn-lg shadow-sm">
+                  <button type="submit" class="btn btn-success btn-lg shadow-sm">
                     <i class="bi bi-stars me-2"></i>Register
                   </button>
                 </div>
@@ -115,11 +115,11 @@
 <style>
   .register-page {
     min-height: calc(100vh - 120px);
-    background: linear-gradient(180deg, rgba(118, 75, 162, 0.08) 0%, rgba(102, 126, 234, 0.08) 40%, rgba(255, 255, 255, 0.85) 100%);
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.12) 0%, rgba(22, 163, 74, 0.08) 40%, rgba(255, 255, 255, 0.85) 100%);
   }
 
   .register-hero {
-    background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.92) 60%, rgba(255, 244, 231, 0.9) 100%);
+    background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.92) 60%, rgba(236, 253, 245, 0.9) 100%);
     border-radius: 2rem;
   }
 
@@ -137,6 +137,11 @@
     border-radius: 1rem;
   }
 
+  .register-form .form-control:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 0.25rem rgba(34, 197, 94, 0.25);
+  }
+
   .register-icon {
     width: 42px;
     height: 42px;
@@ -148,6 +153,22 @@
 
   .register-cta {
     border-color: rgba(148, 163, 184, 0.35) !important;
+  }
+
+  .btn-success {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    border: none;
+  }
+
+  .btn-success:hover {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  }
+
+  .btn-outline-success:hover {
+    background-color: #22c55e;
+    border-color: #22c55e;
   }
 
   @media (max-width: 991.98px) {
