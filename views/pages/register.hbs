@@ -5,43 +5,67 @@
         <div class="card-body p-5">
           <h2 class="card-title text-center mb-4">Create Account</h2>
           <p class="text-center text-muted mb-4">Join BudgetBites to start planning affordable meals</p>
-          
+
+          <div class="alert alert-info" role="alert">
+            <strong>Registration requirements</strong>
+            <ul class="mb-0 ps-3">
+              <li>Username is required (letters/numbers only)</li>
+              <li>Use a valid email address (lowercased automatically)</li>
+              <li>Password must be at least 6 characters long</li>
+            </ul>
+          </div>
+
           {{> message}}
           
-          <form action="/register" method="POST">
+          <form action="/register" method="POST" novalidate>
             <div class="mb-3">
               <label for="username" class="form-label">Username</label>
               <input 
                 type="text" 
-                class="form-control" 
+                class="form-control {{#if errors.username}}is-invalid{{/if}}" 
                 id="username" 
                 name="username" 
                 placeholder="Choose a username"
                 value="{{form.username}}"
                 required
                 autofocus>
+              {{#if errors.username}}
+              <div class="invalid-feedback">
+                {{errors.username}}
+              </div>
+              {{/if}}
             </div>
             <div class="mb-3">
               <label for="email" class="form-label">Email</label>
               <input 
                 type="email" 
-                class="form-control" 
+                class="form-control {{#if errors.email}}is-invalid{{/if}}" 
                 id="email" 
                 name="email" 
                 placeholder="you@example.com"
                 value="{{form.email}}"
                 required>
+              {{#if errors.email}}
+              <div class="invalid-feedback">
+                {{errors.email}}
+              </div>
+              {{/if}}
             </div>
             <div class="mb-3">
               <label for="password" class="form-label">Password</label>
               <input 
                 type="password" 
-                class="form-control" 
+                class="form-control {{#if errors.password}}is-invalid{{/if}}" 
                 id="password" 
                 name="password" 
                 placeholder="Create a password"
                 minlength="6"
                 required>
+              {{#if errors.password}}
+              <div class="invalid-feedback">
+                {{errors.password}}
+              </div>
+              {{/if}}
             </div>
             <div class="d-grid">
               <button type="submit" class="btn btn-primary btn-lg">Register</button>

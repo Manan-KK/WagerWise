@@ -461,7 +461,10 @@ app.get('/register', (req, res) => {
     return res.redirect('/discover');
   }
 
-  res.render('pages/register');
+  res.render('pages/register', {
+    form: {},
+    errors: {}
+  });
 });
 
 app.post('/register', async (req, res) => {
@@ -472,29 +475,33 @@ app.post('/register', async (req, res) => {
     form: {
       username: rawUsername,
       email: rawEmail
-    }
+    },
+    errors: {}
   };
 
   if (!rawUsername) {
+    viewModel.errors.username = 'Please enter a valid username.';
     return res.render('pages/register', {
       ...viewModel,
-      message: 'Please enter a valid username.',
+      message: 'Fix the highlighted issues and try again.',
       error: true
     });
   }
 
   if (!EMAIL_REGEX.test(rawEmail)) {
+    viewModel.errors.email = 'Please enter a valid email address.';
     return res.render('pages/register', {
       ...viewModel,
-      message: 'Please enter a valid email address.',
+      message: 'Fix the highlighted issues and try again.',
       error: true
     });
   }
 
   if (password.length < 6) {
+    viewModel.errors.password = 'Password must be at least 6 characters long.';
     return res.render('pages/register', {
       ...viewModel,
-      message: 'Password must be at least 6 characters long.',
+      message: 'Fix the highlighted issues and try again.',
       error: true
     });
   }
@@ -514,6 +521,11 @@ app.post('/register', async (req, res) => {
         existingUser.username === username
           ? 'Username is already taken. Please choose another one.'
           : 'Email is already in use. Try logging in or use a different email.';
+      if (existingUser.username === username) {
+        viewModel.errors.username = conflictMessage;
+      } else {
+        viewModel.errors.email = conflictMessage;
+      }
 
       return res.render('pages/register', {
         ...viewModel,
