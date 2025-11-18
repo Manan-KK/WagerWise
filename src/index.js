@@ -13,6 +13,20 @@ const session = require('express-session'); // To set the session object. To sto
 const bcrypt = require('bcryptjs'); //  To hash passwords
 const axios = require('axios'); // For making HTTP requests to external APIs
 
+const PORT = Number(process.env.PORT) || 3000;
+
+const resolveDbHost = () => {
+  if (process.env.POSTGRES_HOST) {
+    return process.env.POSTGRES_HOST;
+  }
+
+  if (process.env.NODE_ENV === 'test') {
+    return '127.0.0.1';
+  }
+
+  return 'db';
+};
+
 // *****************************************************
 // <!-- Section 2 : Connect to DB -->
 // *****************************************************
@@ -43,6 +57,36 @@ Handlebars.registerHelper('groupBy', function(array, property) {
   return grouped;
 });
 
+Handlebars.registerHelper('includes', function(array, value) {
+  if (!Array.isArray(array)) {
+    return false;
+  }
+  return array.some(item => String(item) === String(value));
+});
+
+Handlebars.registerHelper('formatCurrency', function(value) {
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) {
+    return '';
+  }
+  return `$${(numericValue / 100).toFixed(2)}`;
+});
+
+Handlebars.registerHelper('formatDate', function(dateValue) {
+  if (!dateValue) {
+    return '';
+  }
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(date);
+});
+
 const stripHtmlTags = (value) => {
   if (!value || typeof value !== 'string') {
     return '';
@@ -52,11 +96,11 @@ const stripHtmlTags = (value) => {
 
 // database configuration
 const dbConfig = {
-  host: 'db', // the database server (Docker service name)
-  port: 5432, // the database port
-  database: process.env.POSTGRES_DB, // the database name
-  user: process.env.POSTGRES_USER, // the user account to connect with
-  password: process.env.POSTGRES_PASSWORD, // the password of the user account
+  host: resolveDbHost(),
+  port: Number(process.env.POSTGRES_PORT) || 5432,
+  database: process.env.POSTGRES_DB,
+  user: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD,
 };
 
 const db = pgp(dbConfig);
@@ -71,13 +115,299 @@ db.connect()
     console.log('ERROR:', error.message || error);
   });
 
+const spoonacularRequest = (endpoint, params = {}) => {
+  return axios.get(`${SPOONACULAR_BASE_URL}${endpoint}`, {
+    params: {
+      apiKey: SPOONACULAR_API_KEY,
+      ...params,
+    },
+  });
+};
+
+const normalizeApiRecipe = (recipeData = {}) => {
+  if (!recipeData || typeof recipeData !== 'object') {
+    return null;
+  }
+
+  const sanitizedSummary = stripHtmlTags(recipeData.summary);
+  let normalizedPrice = null;
+
+  if (recipeData.pricePerServing !== undefined && recipeData.pricePerServing !== null) {
+    const numericPrice = Number(recipeData.pricePerServing);
+    if (!Number.isNaN(numericPrice)) {
+      normalizedPrice = Number((numericPrice / 100).toFixed(2));
+    }
+  }
+
+  return {
+    ...recipeData,
+    id: recipeData.id || recipeData.spoonacular_id,
+    summary: sanitizedSummary,
+    pricePerServing: normalizedPrice,
+  };
+};
+
+const recipeHasIngredientCost = (recipe) => {
+  if (!recipe || !Array.isArray(recipe.extendedIngredients)) {
+    return false;
+  }
+
+  return recipe.extendedIngredients.some(ingredient => {
+    const costValue = ingredient?.estimatedCost?.value;
+    return typeof costValue === 'number' && !Number.isNaN(costValue);
+  });
+};
+
+const applyPriceBreakdownToRecipe = (recipe, priceData) => {
+  if (!recipe || !priceData) {
+    return recipe;
+  }
+
+  if (Array.isArray(recipe.extendedIngredients) && Array.isArray(priceData.ingredients)) {
+    const priceMap = new Map();
+    priceData.ingredients.forEach(item => {
+      const key = (item.name || '').trim().toLowerCase();
+      if (!key) {
+        return;
+      }
+      const numericPrice = Number(item.price);
+      if (Number.isNaN(numericPrice)) {
+        return;
+      }
+
+      priceMap.set(key, {
+        price: numericPrice,
+        amount: item.amount,
+        image: item.image
+      });
+    });
+
+    recipe.extendedIngredients = recipe.extendedIngredients.map(ingredient => {
+      if (!ingredient) {
+        return ingredient;
+      }
+
+      const key = (ingredient.name || ingredient.original || '').trim().toLowerCase();
+      const breakdown = priceMap.get(key);
+
+      if (breakdown) {
+        ingredient.estimatedCost = {
+          value: breakdown.price,
+          unit: 'US Cents',
+          amount: breakdown.amount,
+          image: breakdown.image
+        };
+      }
+
+      return ingredient;
+    });
+  }
+
+  if (typeof priceData.totalCost === 'number') {
+    recipe.totalIngredientCost = priceData.totalCost;
+  }
+
+  if (typeof priceData.totalCostPerServing === 'number') {
+    recipe.totalCostPerServing = priceData.totalCostPerServing;
+  }
+
+  recipe.priceBreakdown = priceData;
+  return recipe;
+};
+
+const saveRecipeToDatabase = async (recipe) => {
+  if (!recipe || !recipe.id) {
+    return null;
+  }
+
+  const payload = {
+    spoonacularId: recipe.id,
+    title: recipe.title || 'Untitled Recipe',
+    description: recipe.summary || recipe.description || null,
+    servings: recipe.servings || null,
+    sourceUrl: recipe.sourceUrl || null,
+    imageUrl: recipe.image || null,
+    readyInMinutes: recipe.readyInMinutes || null,
+    pricePerServing: typeof recipe.pricePerServing === 'number' ? recipe.pricePerServing : null,
+    summary: recipe.summary || null,
+    rawData: JSON.stringify(recipe),
+  };
+
+  try {
+    await db.one(
+      `INSERT INTO recipes (
+        spoonacular_id,
+        title,
+        description,
+        servings,
+        source_url,
+        image_url,
+        ready_in_minutes,
+        price_per_serving,
+        summary,
+        raw_data
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
+      ON CONFLICT (spoonacular_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        servings = EXCLUDED.servings,
+        source_url = EXCLUDED.source_url,
+        image_url = EXCLUDED.image_url,
+        ready_in_minutes = EXCLUDED.ready_in_minutes,
+        price_per_serving = EXCLUDED.price_per_serving,
+        summary = EXCLUDED.summary,
+        raw_data = EXCLUDED.raw_data,
+        updated_at = NOW()
+      RETURNING recipe_id`,
+      [
+        payload.spoonacularId,
+        payload.title,
+        payload.description,
+        payload.servings,
+        payload.sourceUrl,
+        payload.imageUrl,
+        payload.readyInMinutes,
+        payload.pricePerServing,
+        payload.summary,
+        payload.rawData,
+      ]
+    );
+  } catch (error) {
+    console.error(`Error saving recipe ${recipe.id} to database:`, error.message || error);
+  }
+
+  return recipe;
+};
+
+const fetchRecipePriceBreakdown = async (recipeId) => {
+  if (!recipeId) {
+    return null;
+  }
+
+  try {
+    const response = await spoonacularRequest(`/recipes/${recipeId}/priceBreakdownWidget.json`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching price breakdown for recipe ${recipeId}:`, error.response?.data || error.message);
+    return null;
+  }
+};
+
+const ensureRecipeHasCostData = async (recipe) => {
+  if (!recipe || recipeHasIngredientCost(recipe)) {
+    return recipe;
+  }
+
+  try {
+    const priceData = await fetchRecipePriceBreakdown(recipe.id);
+    if (priceData) {
+      const enriched = applyPriceBreakdownToRecipe(recipe, priceData);
+      await saveRecipeToDatabase(enriched);
+      return enriched;
+    }
+  } catch (error) {
+    console.error(`Error enriching recipe ${recipe?.id} with cost data:`, error.response?.data || error.message);
+  }
+
+  return recipe;
+};
+
+const getCachedRecipesMap = async (ids = []) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return new Map();
+  }
+
+  try {
+    const rows = await db.any(
+      'SELECT spoonacular_id, raw_data FROM recipes WHERE spoonacular_id IN ($1:csv)',
+      [ids]
+    );
+
+    return rows.reduce((acc, row) => {
+      if (row.raw_data) {
+        const recipe = {
+          ...row.raw_data,
+          id: row.raw_data.id || row.spoonacular_id,
+        };
+        acc.set(row.spoonacular_id, recipe);
+      }
+      return acc;
+    }, new Map());
+  } catch (error) {
+    console.error('Error loading cached recipes:', error.message || error);
+    return new Map();
+  }
+};
+
+const fetchRecipeFromApi = async (recipeId) => {
+  try {
+    const response = await spoonacularRequest(`/recipes/${recipeId}/information`, {
+      includeNutrition: true,
+    });
+    let normalizedRecipe = normalizeApiRecipe(response.data);
+    if (normalizedRecipe) {
+      const priceData = await fetchRecipePriceBreakdown(recipeId);
+      if (priceData) {
+        normalizedRecipe = applyPriceBreakdownToRecipe(normalizedRecipe, priceData);
+      }
+    }
+    if (normalizedRecipe) {
+      await saveRecipeToDatabase(normalizedRecipe);
+    }
+    return normalizedRecipe;
+  } catch (error) {
+    console.error(`Error fetching recipe ${recipeId}:`, error.response?.data || error.message);
+    return null;
+  }
+};
+
+const getDetailedRecipes = async (recipeIds = []) => {
+  if (!Array.isArray(recipeIds) || recipeIds.length === 0) {
+    return [];
+  }
+
+  const cachedRecipes = await getCachedRecipesMap(recipeIds);
+  const missingIds = recipeIds.filter(id => !cachedRecipes.has(id));
+
+  if (missingIds.length > 0) {
+    const fetchedRecipes = await Promise.all(missingIds.map(fetchRecipeFromApi));
+    fetchedRecipes.forEach(recipe => {
+      if (recipe && recipe.id) {
+        cachedRecipes.set(recipe.id, recipe);
+      }
+    });
+  }
+
+  const orderedRecipes = recipeIds
+    .map(id => cachedRecipes.get(id))
+    .filter(recipe => Boolean(recipe));
+
+  const enrichedRecipes = await Promise.all(
+    orderedRecipes.map(async (recipe) => {
+      try {
+        return await ensureRecipeHasCostData(recipe);
+      } catch (error) {
+        console.error(`Error ensuring cost data for recipe ${recipe?.id}:`, error.response?.data || error.message);
+        return recipe;
+      }
+    })
+  );
+
+  return enrichedRecipes.filter(recipe => Boolean(recipe));
+};
+
 // *****************************************************
 // <!-- Section 3 : API Configuration -->
 // *****************************************************
 
 // Spoonacular API configuration
-const SPOONACULAR_API_KEY = 'd172638adb4d4089925a33f2d0f820cd';
+const FALLBACK_SPOONACULAR_API_KEY = 'd172638adb4d4089925a33f2d0f820cd';
+const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY || FALLBACK_SPOONACULAR_API_KEY;
 const SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
+
+if (!process.env.SPOONACULAR_API_KEY) {
+  console.warn('SPOONACULAR_API_KEY not set in environment. Falling back to development key.');
+}
 
 // *****************************************************
 // <!-- Section 4 : App Settings -->
@@ -103,6 +433,9 @@ app.use(
     extended: true,
   })
 );
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, '../public')));
 
 // *****************************************************
 // <!-- Section 5 : API Routes -->
@@ -326,11 +659,160 @@ app.get('/logout', (req, res) => {
 // Authentication Required - routes below this require authentication
 app.use(auth);
 
-app.get('/discover', (req, res) => {
+const getUserFavoriteIds = async (userId) => {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    const rows = await db.any(
+      'SELECT spoonacular_id FROM user_favorite_recipes WHERE user_id = $1',
+      [userId]
+    );
+    return rows
+      .map(row => Number(row.spoonacular_id))
+      .filter(id => !Number.isNaN(id));
+  } catch (error) {
+    console.error('Error fetching favorite ids:', error);
+    return [];
+  }
+};
+
+const parseRawRecipeData = (rawValue) => {
+  if (!rawValue) {
+    return {};
+  }
+
+  if (typeof rawValue === 'object') {
+    return { ...rawValue };
+  }
+
+  if (typeof rawValue === 'string') {
+    try {
+      return JSON.parse(rawValue);
+    } catch (error) {
+      console.error('Failed to parse stored recipe data:', error.message);
+    }
+  }
+
+  return {};
+};
+
+const formatFavoriteRecipe = (row = {}) => {
+  const rawData = parseRawRecipeData(row.raw_data);
+  const formatted = {
+    ...rawData,
+    id: rawData.id || row.spoonacular_id,
+    title: rawData.title || row.title,
+    summary: rawData.summary || row.summary,
+    servings: rawData.servings || row.servings,
+    readyInMinutes: rawData.readyInMinutes || row.ready_in_minutes,
+    pricePerServing:
+      typeof rawData.pricePerServing === 'number'
+        ? rawData.pricePerServing
+        : typeof row.price_per_serving === 'number'
+          ? Number(row.price_per_serving)
+          : null,
+    image: rawData.image || row.image_url,
+    sourceUrl: rawData.sourceUrl || row.source_url,
+    totalIngredientCost: rawData.totalIngredientCost,
+    totalCostPerServing: rawData.totalCostPerServing,
+    favoritedAt: row.favorited_at
+  };
+
+  if (!formatted.extendedIngredients && rawData.extendedIngredients) {
+    formatted.extendedIngredients = rawData.extendedIngredients;
+  }
+
+  return formatted;
+};
+
+const getUserFavorites = async (userId) => {
+  if (!userId) {
+    return [];
+  }
+
+  try {
+    const rows = await db.any(
+      `SELECT 
+        f.created_at AS favorited_at,
+        r.spoonacular_id,
+        r.title,
+        r.description,
+        r.servings,
+        r.source_url,
+        r.image_url,
+        r.ready_in_minutes,
+        r.price_per_serving,
+        r.summary,
+        r.raw_data
+       FROM user_favorite_recipes f
+       JOIN recipes r ON r.recipe_id = f.recipe_id
+       WHERE f.user_id = $1
+       ORDER BY f.created_at DESC`,
+      [userId]
+    );
+
+    return rows.map(formatFavoriteRecipe);
+  } catch (error) {
+    console.error('Error fetching user favorites:', error);
+    return [];
+  }
+};
+
+const ensureRecipeRecord = async (recipeId) => {
+  if (!recipeId) {
+    return null;
+  }
+
+  let recipeRecord = await db.oneOrNone(
+    'SELECT recipe_id FROM recipes WHERE spoonacular_id = $1',
+    [recipeId]
+  );
+
+  if (recipeRecord) {
+    return recipeRecord.recipe_id;
+  }
+
+  await fetchRecipeFromApi(recipeId);
+
+  recipeRecord = await db.oneOrNone(
+    'SELECT recipe_id FROM recipes WHERE spoonacular_id = $1',
+    [recipeId]
+  );
+
+  return recipeRecord ? recipeRecord.recipe_id : null;
+};
+
+const getSafeRedirectPath = (req, fallback = '/discover') => {
+  const explicitTarget = req.body?.redirectTo || req.query?.redirectTo;
+  if (typeof explicitTarget === 'string' && explicitTarget.startsWith('/')) {
+    return explicitTarget;
+  }
+
+  const referer = req.get('referer');
+  if (referer) {
+    try {
+      const refererUrl = new URL(referer);
+      const host = req.get('host');
+      if (refererUrl.host === host) {
+        return refererUrl.pathname + refererUrl.search;
+      }
+    } catch (error) {
+      // Ignore malformed referer headers
+    }
+  }
+
+  return fallback;
+};
+
+app.get('/discover', async (req, res) => {
+  const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
   res.render('pages/discover', { 
     user: req.session.user,
     results: null,
-    searchParams: null
+    searchParams: null,
+    favoriteRecipeIds
   });
 });
 
@@ -352,8 +834,7 @@ app.post('/discover/search', async (req, res) => {
 
     // Build query parameters for Spoonacular API
     const params = {
-      apiKey: SPOONACULAR_API_KEY,
-      number: Math.min(parseInt(number) || 10, 100), // Max 100 recipes
+      number: Math.min(parseInt(number, 10) || 10, 100),
       addRecipeInformation: true,
       addRecipeNutrition: true,
       addRecipePrice: true,
@@ -363,65 +844,50 @@ app.post('/discover/search', async (req, res) => {
     if (query) params.query = query;
     if (diet && diet !== 'none') params.diet = diet;
     if (intolerances) params.intolerances = intolerances;
-    if (maxReadyTime) params.maxReadyTime = parseInt(maxReadyTime);
-    if (minCalories) params.minCalories = parseInt(minCalories);
-    if (maxCalories) params.maxCalories = parseInt(maxCalories);
+    if (maxReadyTime) params.maxReadyTime = parseInt(maxReadyTime, 10);
+    if (minCalories) params.minCalories = parseInt(minCalories, 10);
+    if (maxCalories) params.maxCalories = parseInt(maxCalories, 10);
     if (minPrice) params.minPrice = parseFloat(minPrice);
     if (maxPrice) params.maxPrice = parseFloat(maxPrice);
+
     if (ingredients) {
-      // If ingredients are provided, use findByIngredients endpoint first
-      return res.redirect(`/discover/ingredients?ingredients=${encodeURIComponent(ingredients)}&${new URLSearchParams(params)}`);
+      const ingredientQuery = new URLSearchParams({
+        ingredients,
+        number: params.number,
+      });
+      return res.redirect(`/discover/ingredients?${ingredientQuery.toString()}`);
     }
 
-    // Call Spoonacular Complex Recipe Search endpoint
-    const response = await axios.get(`${SPOONACULAR_BASE_URL}/recipes/complexSearch`, {
-      params: params
-    });
+    const response = await spoonacularRequest('/recipes/complexSearch', params);
+    const searchResults = response.data.results || [];
+    const recipeIds = searchResults.map(recipe => recipe.id).filter(id => !!id);
+    const limitedRecipeIds = recipeIds.slice(0, 20);
+    let detailedRecipes = await getDetailedRecipes(limitedRecipeIds);
 
-    const recipes = response.data.results || [];
+    // Get user preferences and sort recipes
+    const preferences = await getUserPreferences(req.session.user.id);
+    detailedRecipes = sortRecipesByPreferences(detailedRecipes, preferences);
 
-    // Get detailed information for each recipe including prices
-    const detailedRecipes = await Promise.all(
-      recipes.slice(0, 20).map(async (recipe) => {
-        try {
-          const detailResponse = await axios.get(
-            `${SPOONACULAR_BASE_URL}/recipes/${recipe.id}/information`,
-            {
-              params: {
-                apiKey: SPOONACULAR_API_KEY,
-                includeNutrition: true,
-              }
-            }
-          );
-          const recipeData = detailResponse.data;
-          // Format price per serving (divide by 100 as Spoonacular returns in cents)
-          if (recipeData.pricePerServing) {
-            recipeData.pricePerServing = (recipeData.pricePerServing / 100).toFixed(2);
-          }
-          recipeData.summary = stripHtmlTags(recipeData.summary);
-          return recipeData;
-        } catch (error) {
-          console.error(`Error fetching recipe ${recipe.id}:`, error.message);
-          return recipe ? { ...recipe, summary: stripHtmlTags(recipe.summary) } : null;
-        }
-      })
-    );
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
 
     res.render('pages/discover', {
       user: req.session.user,
-      results: detailedRecipes.filter(r => r !== null),
+      results: detailedRecipes,
       searchParams: req.body,
       message: detailedRecipes.length > 0 ? `Found ${detailedRecipes.length} recipes!` : 'No recipes found. Try adjusting your search criteria.',
-      error: detailedRecipes.length === 0
+      error: detailedRecipes.length === 0,
+      favoriteRecipeIds
     });
   } catch (error) {
     console.error('Error searching recipes:', error.response?.data || error.message);
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
     res.render('pages/discover', {
       user: req.session.user,
       results: null,
       searchParams: req.body,
       message: 'Error searching recipes. Please try again.',
-      error: true
+      error: true,
+      favoriteRecipeIds
     });
   }
 });
@@ -431,61 +897,41 @@ app.get('/discover/ingredients', async (req, res) => {
   try {
     const ingredients = req.query.ingredients;
     const params = {
-      apiKey: SPOONACULAR_API_KEY,
       ingredients: ingredients,
-      number: Math.min(parseInt(req.query.number) || 10, 100),
+      number: Math.min(parseInt(req.query.number, 10) || 10, 100),
       ranking: 1, // Maximize used ingredients
       ignorePantry: true
     };
 
-    const response = await axios.get(`${SPOONACULAR_BASE_URL}/recipes/findByIngredients`, {
-      params: params
-    });
-
+    const response = await spoonacularRequest('/recipes/findByIngredients', params);
     const recipes = response.data || [];
+    const recipeIds = recipes.map(recipe => recipe.id).filter(id => !!id);
+    let detailedRecipes = await getDetailedRecipes(recipeIds.slice(0, 20));
 
-    // Get detailed information for each recipe
-    const detailedRecipes = await Promise.all(
-      recipes.slice(0, 20).map(async (recipe) => {
-        try {
-          const detailResponse = await axios.get(
-            `${SPOONACULAR_BASE_URL}/recipes/${recipe.id}/information`,
-            {
-              params: {
-                apiKey: SPOONACULAR_API_KEY,
-                includeNutrition: true,
-              }
-            }
-          );
-          const recipeData = detailResponse.data;
-          // Format price per serving (divide by 100 as Spoonacular returns in cents)
-          if (recipeData.pricePerServing) {
-            recipeData.pricePerServing = (recipeData.pricePerServing / 100).toFixed(2);
-          }
-          recipeData.summary = stripHtmlTags(recipeData.summary);
-          return recipeData;
-        } catch (error) {
-          console.error(`Error fetching recipe ${recipe.id}:`, error.message);
-          return null;
-        }
-      })
-    );
+    // Get user preferences and sort recipes
+    const preferences = await getUserPreferences(req.session.user.id);
+    detailedRecipes = sortRecipesByPreferences(detailedRecipes, preferences);
+
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
 
     res.render('pages/discover', {
       user: req.session.user,
-      results: detailedRecipes.filter(r => r !== null),
+      results: detailedRecipes,
       searchParams: { ingredients: ingredients },
       message: detailedRecipes.length > 0 ? `Found ${detailedRecipes.length} recipes!` : 'No recipes found. Try different ingredients.',
-      error: detailedRecipes.length === 0
+      error: detailedRecipes.length === 0,
+      favoriteRecipeIds
     });
   } catch (error) {
     console.error('Error searching by ingredients:', error.response?.data || error.message);
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
     res.render('pages/discover', {
       user: req.session.user,
       results: null,
       searchParams: req.query,
       message: 'Error searching recipes. Please try again.',
-      error: true
+      error: true,
+      favoriteRecipeIds
     });
   }
 });
@@ -499,36 +945,32 @@ app.post('/discover/grocery-list', async (req, res) => {
       .filter(id => !Number.isNaN(id));
     
     if (recipeIds.length === 0) {
+      const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
       return res.render('pages/discover', {
         user: req.session.user,
         results: null,
         message: 'Please select at least one recipe.',
-        error: true
+        error: true,
+        favoriteRecipeIds
       });
     }
 
-    // Get detailed recipe information for all selected recipes
-    const recipes = await Promise.all(
-      recipeIds.map(async (id) => {
-        try {
-          const response = await axios.get(
-            `${SPOONACULAR_BASE_URL}/recipes/${id}/information`,
-            {
-              params: {
-                apiKey: SPOONACULAR_API_KEY,
-                includeNutrition: true,
-              }
-            }
-          );
-          const recipeData = response.data;
-          recipeData.summary = stripHtmlTags(recipeData.summary);
-          return recipeData;
-        } catch (error) {
-          console.error(`Error fetching recipe ${id}:`, error.message);
-          return null;
-        }
-      })
-    );
+    let recipes = await getDetailedRecipes(recipeIds);
+
+    if (recipes.length === 0) {
+      const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
+      return res.render('pages/discover', {
+        user: req.session.user,
+        results: null,
+        message: 'Unable to load the selected recipes. Please try searching again.',
+        error: true,
+        favoriteRecipeIds
+      });
+    }
+
+    // Get user preferences and sort recipes before generating grocery list
+    const preferences = await getUserPreferences(req.session.user.id);
+    recipes = sortRecipesByPreferences(recipes, preferences);
 
     // Aggregate ingredients from all recipes
     const ingredientMap = new Map();
@@ -538,25 +980,36 @@ app.post('/discover/grocery-list', async (req, res) => {
       if (!recipe || !recipe.extendedIngredients) return;
       
       recipe.extendedIngredients.forEach(ingredient => {
-        const key = ingredient.name.toLowerCase();
+        const resolvedName = (ingredient.name || ingredient.original || '').trim();
+        if (!resolvedName) {
+          return;
+        }
+
+        const key = resolvedName.toLowerCase();
+        const cost = ((ingredient.estimatedCost?.value) || 0) / 100;
+        totalEstimatedCost += cost;
+
         if (ingredientMap.has(key)) {
           const existing = ingredientMap.get(key);
           // Try to combine amounts (simplified - in production, would need proper unit conversion)
           existing.amount += ingredient.amount || 0;
           existing.recipes.push(recipe.title);
+          if (cost > 0) {
+            const previousCost = parseFloat(existing.estimatedCost) || 0;
+            existing.estimatedCost = (previousCost + cost).toFixed(2);
+          }
         } else {
           ingredientMap.set(key, {
             id: ingredient.id,
-            name: ingredient.name,
+            name: ingredient.name || resolvedName,
             original: ingredient.original,
             amount: ingredient.amount || 0,
             unit: ingredient.unit || '',
             aisle: ingredient.aisle || 'Unknown',
             image: ingredient.image,
-            estimatedCost: ingredient.estimatedCost?.value ? (ingredient.estimatedCost.value / 100).toFixed(2) : '0.00',
+            estimatedCost: cost.toFixed(2),
             recipes: [recipe.title]
           });
-          totalEstimatedCost += (ingredient.estimatedCost?.value || 0) / 100; // Convert cents to dollars
         }
       });
     });
@@ -589,31 +1042,279 @@ app.post('/discover/grocery-list', async (req, res) => {
     });
   } catch (error) {
     console.error('Error generating grocery list:', error.response?.data || error.message);
+    const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
     res.render('pages/discover', {
       user: req.session.user,
       results: null,
       message: 'Error generating grocery list. Please try again.',
-      error: true
+      error: true,
+      favoriteRecipeIds
     });
   }
 });
 
-app.get('/dashboard', (req, res) => {
-  res.render('pages/dashboard', { user: req.session.user });
+app.post('/favorites/add', async (req, res) => {
+  const userId = req.session.user.id;
+  const recipeId = parseInt(req.body.recipeId, 10);
+  const redirectPath = getSafeRedirectPath(req, '/discover');
+
+  if (!recipeId) {
+    return res.redirect(redirectPath);
+  }
+
+  try {
+    const recipeRecordId = await ensureRecipeRecord(recipeId);
+    if (!recipeRecordId) {
+      return res.redirect(redirectPath);
+    }
+
+    await db.none(
+      `INSERT INTO user_favorite_recipes (user_id, recipe_id, spoonacular_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, spoonacular_id) DO NOTHING`,
+      [userId, recipeRecordId, recipeId]
+    );
+  } catch (error) {
+    console.error('Error saving favorite recipe:', error);
+  }
+
+  res.redirect(redirectPath);
 });
 
-app.get('/settings', (req, res) => {
-  res.render('pages/settings', { user: req.session.user });
+app.post('/favorites/remove', async (req, res) => {
+  const userId = req.session.user.id;
+  const recipeId = parseInt(req.body.recipeId, 10);
+  const redirectPath = getSafeRedirectPath(req, '/favorites');
+
+  if (!recipeId) {
+    return res.redirect(redirectPath);
+  }
+
+  try {
+    await db.none(
+      'DELETE FROM user_favorite_recipes WHERE user_id = $1 AND spoonacular_id = $2',
+      [userId, recipeId]
+    );
+  } catch (error) {
+    console.error('Error removing favorite recipe:', error);
+  }
+
+  res.redirect(redirectPath);
+});
+
+app.get('/favorites', async (req, res) => {
+  try {
+    const favorites = await getUserFavorites(req.session.user.id);
+    res.render('pages/favorites', {
+      user: req.session.user,
+      favorites,
+      favoriteRecipeIds: favorites.map(recipe => recipe.id),
+      error: false,
+      message: favorites.length === 0 ? 'Save recipes to build your personal cookbook!' : null
+    });
+  } catch (error) {
+    console.error('Error rendering favorites page:', error);
+    res.render('pages/favorites', {
+      user: req.session.user,
+      favorites: [],
+      favoriteRecipeIds: [],
+      error: true,
+      message: 'Unable to load your favorite recipes right now. Please try again.'
+    });
+  }
+});
+
+app.get('/dashboard', async (req, res) => {
+  try {
+    const [favorites, preferences] = await Promise.all([
+      getUserFavorites(req.session.user.id),
+      getUserPreferences(req.session.user.id)
+    ]);
+
+    res.render('pages/dashboard', { 
+      user: req.session.user,
+      favoriteCount: favorites.length,
+      recentFavorites: favorites.slice(0, 3),
+      preferences
+    });
+  } catch (error) {
+    console.error('Error loading dashboard data:', error);
+    res.render('pages/dashboard', { 
+      user: req.session.user,
+      favoriteCount: 0,
+      recentFavorites: [],
+      preferences: null,
+      error: true,
+      message: 'Unable to load dashboard data at this time.'
+    });
+  }
+});
+
+// Helper function to sort recipes based on user preferences
+const sortRecipesByPreferences = (recipes, preferences) => {
+  if (!recipes || recipes.length === 0) return recipes;
+  if (!preferences) return recipes;
+
+  const sorted = [...recipes];
+
+  // Calculate a score for each recipe based on priority factors
+  const calculateScore = (recipe) => {
+    const factors = preferences.priority_factors || { price: 1, time: 1, calories: 1, health: 1 };
+    let score = 0;
+
+    // Price factor (lower is better, so we invert)
+    if (recipe.pricePerServing && factors.price) {
+      score += (100 - (recipe.pricePerServing * 10)) * factors.price;
+    }
+
+    // Time factor (lower is better, so we invert)
+    if (recipe.readyInMinutes && factors.time) {
+      score += (100 - recipe.readyInMinutes) * factors.time;
+    }
+
+    // Calories factor (can be high or low depending on preference)
+    if (recipe.nutrition?.nutrients) {
+      const calories = recipe.nutrition.nutrients.find(n => n.name === 'Calories');
+      if (calories && factors.calories) {
+        score += (calories.amount / 10) * factors.calories;
+      }
+    }
+
+    // Health score (if available from API)
+    if (recipe.healthScore && factors.health) {
+      score += recipe.healthScore * factors.health;
+    }
+
+    return score;
+  };
+
+  // Sort based on the selected criteria
+  const sortBy = preferences.sort_by || 'relevance';
+  const sortOrder = preferences.sort_order || 'asc';
+  const isAscending = sortOrder === 'asc';
+
+  sorted.sort((a, b) => {
+    let comparison = 0;
+
+    switch (sortBy) {
+      case 'price':
+        const priceA = a.pricePerServing || Infinity;
+        const priceB = b.pricePerServing || Infinity;
+        comparison = priceA - priceB;
+        break;
+
+      case 'time':
+        const timeA = a.readyInMinutes || Infinity;
+        const timeB = b.readyInMinutes || Infinity;
+        comparison = timeA - timeB;
+        break;
+
+      case 'calories':
+        const calA = a.nutrition?.nutrients?.find(n => n.name === 'Calories')?.amount || 0;
+        const calB = b.nutrition?.nutrients?.find(n => n.name === 'Calories')?.amount || 0;
+        comparison = calA - calB;
+        break;
+
+      case 'health':
+        const healthA = a.healthScore || 0;
+        const healthB = b.healthScore || 0;
+        comparison = healthB - healthA; // Higher is better
+        break;
+
+      case 'popularity':
+        const popA = a.aggregateLikes || 0;
+        const popB = b.aggregateLikes || 0;
+        comparison = popB - popA; // Higher is better
+        break;
+
+      case 'relevance':
+      default:
+        // Use calculated score for relevance
+        comparison = calculateScore(b) - calculateScore(a);
+        break;
+    }
+
+    return isAscending ? comparison : -comparison;
+  });
+
+  return sorted;
+};
+
+// Helper function to get user preferences
+const getUserPreferences = async (userId) => {
+  try {
+    const prefs = await db.oneOrNone(
+      'SELECT * FROM user_preferences WHERE user_id = $1',
+      [userId]
+    );
+    
+    if (!prefs) {
+      // Return default preferences
+      return {
+        sort_by: 'relevance',
+        sort_order: 'asc',
+        priority_factors: { price: 1, time: 1, calories: 1, health: 1 }
+      };
+    }
+    
+    return {
+      sort_by: prefs.sort_by || 'relevance',
+      sort_order: prefs.sort_order || 'asc',
+      priority_factors: prefs.priority_factors || { price: 1, time: 1, calories: 1, health: 1 }
+    };
+  } catch (error) {
+    console.error('Error getting user preferences:', error);
+    return {
+      sort_by: 'relevance',
+      sort_order: 'asc',
+      priority_factors: { price: 1, time: 1, calories: 1, health: 1 }
+    };
+  }
+};
+
+// Helper function to save/update user preferences
+const saveUserPreferences = async (userId, preferences) => {
+  try {
+    await db.none(
+      `INSERT INTO user_preferences (user_id, sort_by, sort_order, priority_factors, updated_at)
+       VALUES ($1, $2, $3, $4::jsonb, NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         sort_by = EXCLUDED.sort_by,
+         sort_order = EXCLUDED.sort_order,
+         priority_factors = EXCLUDED.priority_factors,
+         updated_at = NOW()`,
+      [
+        userId,
+        preferences.sort_by || 'relevance',
+        preferences.sort_order || 'asc',
+        JSON.stringify(preferences.priority_factors || { price: 1, time: 1, calories: 1, health: 1 })
+      ]
+    );
+    return true;
+  } catch (error) {
+    console.error('Error saving user preferences:', error);
+    return false;
+  }
+};
+
+app.get('/settings', async (req, res) => {
+  const preferences = await getUserPreferences(req.session.user.id);
+  res.render('pages/settings', { 
+    user: req.session.user,
+    preferences: preferences
+  });
 });
 
 app.post('/settings/username', async (req, res) => {
   const userId = req.session.user.id;
   const newUsername = req.body.username.trim();
+  const preferences = await getUserPreferences(userId);
   
   // Check if username is provided
   if (!newUsername) {
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Username cannot be empty.',
       error: true
     });
@@ -623,6 +1324,7 @@ app.post('/settings/username', async (req, res) => {
   if (newUsername === req.session.user.username) {
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'New username must be different from current username.',
       error: true
     });
@@ -634,6 +1336,7 @@ app.post('/settings/username', async (req, res) => {
     if (existingUser) {
       return res.render('pages/settings', {
         user: req.session.user,
+        preferences: preferences,
         message: 'Username already exists. Please choose a different username.',
         error: true
       });
@@ -648,12 +1351,14 @@ app.post('/settings/username', async (req, res) => {
     
     res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Username updated successfully!',
       error: false
     });
   } catch (error) {
     res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Failed to update username. Please try again.',
       error: true
     });
@@ -668,24 +1373,30 @@ app.post('/settings/password', async (req, res) => {
   
   // Validate passwords
   if (!currentPassword || !newPassword || !confirmPassword) {
+    const preferences = await getUserPreferences(userId);
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'All password fields are required.',
       error: true
     });
   }
   
   if (newPassword !== confirmPassword) {
+    const preferences = await getUserPreferences(userId);
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'New passwords do not match.',
       error: true
     });
   }
   
   if (newPassword.length < 6) {
+    const preferences = await getUserPreferences(userId);
     return res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Password must be at least 6 characters long.',
       error: true
     });
@@ -698,8 +1409,10 @@ app.post('/settings/password', async (req, res) => {
     // Verify current password
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) {
+      const preferences = await getUserPreferences(userId);
       return res.render('pages/settings', {
         user: req.session.user,
+        preferences: preferences,
         message: 'Current password is incorrect.',
         error: true
       });
@@ -711,15 +1424,65 @@ app.post('/settings/password', async (req, res) => {
     // Update password
     await db.none('UPDATE users SET password = $1 WHERE id = $2', [hash, userId]);
     
+    const preferences = await getUserPreferences(userId);
     res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Password updated successfully!',
       error: false
     });
   } catch (error) {
+    const preferences = await getUserPreferences(userId);
     res.render('pages/settings', {
       user: req.session.user,
+      preferences: preferences,
       message: 'Failed to update password. Please try again.',
+      error: true
+    });
+  }
+});
+
+app.post('/settings/preferences', async (req, res) => {
+  const userId = req.session.user.id;
+  const { sort_by, sort_order, price_priority, time_priority, calories_priority, health_priority } = req.body;
+  
+  try {
+    const preferences = {
+      sort_by: sort_by || 'relevance',
+      sort_order: sort_order || 'asc',
+      priority_factors: {
+        price: parseFloat(price_priority) || 1,
+        time: parseFloat(time_priority) || 1,
+        calories: parseFloat(calories_priority) || 1,
+        health: parseFloat(health_priority) || 1
+      }
+    };
+    
+    const success = await saveUserPreferences(userId, preferences);
+    
+    if (success) {
+      res.render('pages/settings', {
+        user: req.session.user,
+        preferences: preferences,
+        message: 'Meal sorting preferences updated successfully!',
+        error: false
+      });
+    } else {
+      const currentPrefs = await getUserPreferences(userId);
+      res.render('pages/settings', {
+        user: req.session.user,
+        preferences: currentPrefs,
+        message: 'Failed to update preferences. Please try again.',
+        error: true
+      });
+    }
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    const currentPrefs = await getUserPreferences(userId);
+    res.render('pages/settings', {
+      user: req.session.user,
+      preferences: currentPrefs,
+      message: 'Failed to update preferences. Please try again.',
       error: true
     });
   }
@@ -728,6 +1491,13 @@ app.post('/settings/password', async (req, res) => {
 // *****************************************************
 // <!-- Section 5 : Start Server-->
 // *****************************************************
-// starting the server and keeping the connection open to listen for more requests
-app.listen(3000);
-console.log('Server is listening on port 3000');
+let serverInstance;
+
+if (require.main === module) {
+  serverInstance = app.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
+  });
+}
+
+module.exports = app;
+module.exports.saveRecipeToDatabase = saveRecipeToDatabase;

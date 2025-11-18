@@ -24,6 +24,12 @@
               {{#if readyInMinutes}}
               <br><small class="text-muted">{{readyInMinutes}} min • Serves {{servings}}</small>
               {{/if}}
+              {{#if totalIngredientCost}}
+              <br><small class="text-muted">Estimated cost: {{formatCurrency totalIngredientCost}}</small>
+              {{/if}}
+              {{#if totalCostPerServing}}
+              <br><small class="text-muted">{{formatCurrency totalCostPerServing}} per serving</small>
+              {{/if}}
             </div>
           </div>
         </div>
@@ -109,4 +115,3 @@
   }
 }
 </style>
-
