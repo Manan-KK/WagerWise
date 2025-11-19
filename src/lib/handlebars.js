@@ -15,6 +15,11 @@ const registerHelpers = () => {
     }, {});
   });
 
+  Handlebars.registerHelper('or', (...args) => {
+    const values = args.slice(0, -1);
+    return values.some((value) => Boolean(value));
+  });
+
   Handlebars.registerHelper('includes', (array, value) => {
     if (!Array.isArray(array)) {
       return false;

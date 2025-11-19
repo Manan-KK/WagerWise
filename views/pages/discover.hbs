@@ -212,73 +212,17 @@
             </form>
           </div>
         </section>
-  <!-- Results Section -->
-  {{#if results}}
-  <form method="POST" action="/discover/grocery-list" id="groceryListForm">
-    <div class="card">
-      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <h5 class="mb-0">Search Results</h5>
-        <button type="submit" class="btn btn-success" id="generateGroceryList" disabled>
-          Generate Grocery List (<span id="selectedCount">0</span> selected)
-        </button>
-      </div>
-      <div class="card-body">
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-          {{#each results}}
-          <div class="col">
-            <div class="card h-100 shadow-sm">
-              {{#if image}}
-              <img src="{{image}}" class="card-img-top" alt="{{title}}" style="height: 200px; object-fit: cover;">
-              {{/if}}
-              <div class="card-body d-flex flex-column">
-                <h5 class="card-title">{{title}}</h5>
-                {{#if (includes ../favoriteRecipeIds id)}}
-                <span class="badge bg-warning text-dark w-auto mb-2">Favorited</span>
-                {{/if}}
-
-                <div class="form-check mb-3">
-                  <input 
-                    type="checkbox" 
-                    class="form-check-input recipe-checkbox" 
-                    name="recipeIds[]" 
-                    value="{{id}}" 
-                    id="recipe-{{id}}"
-                    onchange="updateSelectedCount()">
-                  <label class="form-check-label" for="recipe-{{id}}">
-                    Add to grocery list
-                  </label>
-                </div>
-
-              <div class="col-12">
-                <div class="d-flex flex-column flex-lg-row justify-content-lg-between align-items-lg-center gap-3">
-                  <div class="d-flex flex-wrap gap-2 text-secondary small">
-                    <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis px-3 py-2">Complex search + nutrition</span>
-                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis px-3 py-2">Ingredient matching</span>
-                    <span class="badge rounded-pill bg-success-subtle text-success-emphasis px-3 py-2">Budget filters</span>
-                  </div>
-                  <div class="d-grid d-lg-inline-flex gap-3">
-                    <button type="submit" class="btn btn-primary btn-lg px-4 shadow-sm">
-                      <i class="bi bi-compass me-2"></i>Search recipes
-                    </button>
-                    <a href="/discover" class="btn btn-outline-secondary btn-lg">
-                      <i class="bi bi-arrow-repeat me-2"></i>Reset filters
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </form>
-          </div>
-        </section>
-
+        <!-- Results Section -->
         {{#if results}}
-        <form method="POST" action="/discover/grocery-list" id="groceryListForm" class="discover-results">
+        <form id="groceryListForm" method="POST" action="/discover/grocery-list"></form>
+        <section class="discover-results">
           <div class="card border-0 shadow-lg mb-5">
             <div class="card-header bg-white border-0 py-4 px-4 px-md-5 d-flex flex-column flex-lg-row flex-wrap justify-content-lg-between align-items-lg-center gap-3">
               <div>
                 <p class="text-uppercase text-secondary small fw-semibold mb-1">Search results</p>
                 <h5 class="mb-0 fw-semibold">Explore matching recipes</h5>
               </div>
-              <button type="submit" class="btn btn-success btn-lg shadow-sm" id="generateGroceryList" disabled>
+              <button type="submit" class="btn btn-success btn-lg shadow-sm" id="generateGroceryList" form="groceryListForm" disabled>
                 <i class="bi bi-list-check me-2"></i>Generate grocery list (<span id="selectedCount">0</span> selected)
               </button>
             </div>
@@ -294,7 +238,12 @@
                     {{/if}}
                     <div class="card-body d-flex flex-column gap-3">
                       <div class="d-flex justify-content-between align-items-start gap-3">
-                        <h5 class="card-title fw-semibold text-dark mb-0">{{title}}</h5>
+                        <div class="flex-grow-1">
+                          <h5 class="card-title fw-semibold text-dark mb-1">{{title}}</h5>
+                          {{#if (includes ../favoriteRecipeIds id)}}
+                          <span class="badge bg-warning text-dark small">Favorited</span>
+                          {{/if}}
+                        </div>
                         <div class="form-check form-switch m-0">
                           <input 
                             type="checkbox" 
@@ -302,6 +251,7 @@
                             name="recipeIds[]" 
                             value="{{id}}" 
                             id="recipe-{{id}}"
+                            form="groceryListForm"
                             onchange="updateSelectedCount()">
                           <label class="form-check-label small text-muted" for="recipe-{{id}}">
                             Add
@@ -334,7 +284,7 @@
                       {{/if}}
 
                       {{#if nutrition}}
-                      <div class="discover-nutrition border-top pt-3 mt-auto">
+                      <div class="discover-nutrition border-top pt-3">
                         <ul class="list-unstyled small text-muted mb-0">
                           {{#each nutrition.nutrients}}
                             {{#if (eq name "Calories")}}
@@ -354,42 +304,41 @@
                       </div>
                       {{/if}}
 
-                      <div class="d-grid mt-auto">
-                        <a href="{{sourceUrl}}" target="_blank" class="btn btn-outline-primary">
-                          <i class="bi bi-box-arrow-up-right me-2"></i>View full recipe
+                      <div class="d-flex flex-wrap gap-2 mt-auto">
+                        {{#if (includes ../favoriteRecipeIds id)}}
+                        <form method="POST" action="/favorites/remove" class="flex-grow-1">
+                          <input type="hidden" name="recipeId" value="{{id}}">
+                          <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-star-fill me-1"></i>Remove favorite
+                          </button>
+                        </form>
+                        {{else}}
+                        <form method="POST" action="/favorites/add" class="flex-grow-1">
+                          <input type="hidden" name="recipeId" value="{{id}}">
+                          <button type="submit" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-star me-1"></i>Save to favorites
+                          </button>
+                        </form>
+                        {{/if}}
+
+                        {{#if sourceUrl}}
+                        <a href="{{sourceUrl}}" target="_blank" class="btn btn-outline-primary flex-grow-1">
+                          <i class="bi bi-box-arrow-up-right me-1"></i>Full recipe
                         </a>
+                        {{else}}
+                        <a href="/recipes/{{id}}" class="btn btn-outline-primary flex-grow-1">
+                          <i class="bi bi-book me-1"></i>Recipe details
+                        </a>
+                        {{/if}}
                       </div>
                     </div>
                   </div>
-                  {{/each}}
-                </ul>
-                {{/if}}
-
-                <div class="mt-auto">
-                  {{#if (includes ../favoriteRecipeIds id)}}
-                  <form method="POST" action="/favorites/remove" class="mb-2">
-                    <input type="hidden" name="recipeId" value="{{id}}">
-                    <button type="submit" class="btn btn-sm btn-warning w-100">
-                      Remove from Favorites
-                    </button>
-                  </form>
-                  {{else}}
-                  <form method="POST" action="/favorites/add" class="mb-2">
-                    <input type="hidden" name="recipeId" value="{{id}}">
-                    <button type="submit" class="btn btn-sm btn-outline-warning w-100">
-                      Save to Favorites
-                    </button>
-                  </form>
-                  {{/if}}
-                  <a href="{{sourceUrl}}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                    View Full Recipe
-                  </a>
                 </div>
                 {{/each}}
               </div>
             </div>
           </div>
-        </form>
+        </section>
         {{else}}
         <section class="empty-state card border-0 shadow-sm">
           <div class="card-body p-5 text-center text-muted">

@@ -1,8 +1,9 @@
-const { searchRecipes, searchRecipesByIngredients } = require('../services/spoonacularService');
 const {
   getDetailedRecipes,
   buildGroceryList,
   sortRecipesByPreferences,
+  searchRecipesWithFallback,
+  searchRecipesByIngredientsWithFallback,
 } = require('../services/recipeService');
 const { getUserPreferences } = require('../services/preferencesService');
 const { getUserFavoriteIds } = require('../services/favoriteService');
@@ -19,63 +20,31 @@ const renderDiscoverLanding = async (req, res) => {
 
 const handleRecipeSearch = async (req, res) => {
   try {
-    const {
-      query,
-      diet,
-      intolerances,
-      ingredients,
-      maxReadyTime,
-      minCalories,
-      maxCalories,
-      minPrice,
-      maxPrice,
-      number = 10,
-    } = req.body;
-
-    const params = {
-      number: Math.min(parseInt(number, 10) || 10, 100),
-      addRecipeInformation: true,
-      addRecipeNutrition: true,
-      addRecipePrice: true,
-    };
-
-    if (query) params.query = query;
-    if (diet && diet !== 'none') params.diet = diet;
-    if (intolerances) params.intolerances = intolerances;
-    if (maxReadyTime) params.maxReadyTime = parseInt(maxReadyTime, 10);
-    if (minCalories) params.minCalories = parseInt(minCalories, 10);
-    if (maxCalories) params.maxCalories = parseInt(maxCalories, 10);
-    if (minPrice) params.minPrice = parseFloat(minPrice);
-    if (maxPrice) params.maxPrice = parseFloat(maxPrice);
+    const { ingredients, number = 10 } = req.body;
+    const limit = Math.min(parseInt(number, 10) || 10, 100);
 
     if (ingredients) {
       const ingredientQuery = new URLSearchParams({
         ingredients,
-        number: params.number,
+        number: limit,
       });
       return res.redirect(`/discover/ingredients?${ingredientQuery.toString()}`);
     }
 
-    const response = await searchRecipes(params);
-    const searchResults = response.data.results || [];
-    const recipeIds = searchResults.map((recipe) => recipe.id).filter((id) => !!id);
-    const limitedRecipeIds = recipeIds.slice(0, 20);
-    let detailedRecipes = await getDetailedRecipes(limitedRecipeIds);
-
+    const recipes = await searchRecipesWithFallback({ ...req.body, number: limit });
     const preferences = await getUserPreferences(req.session.user.id);
-    detailedRecipes = sortRecipesByPreferences(detailedRecipes, preferences);
-
+    const sortedRecipes = sortRecipesByPreferences(recipes, preferences);
     const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
 
     return res.render('pages/discover', {
       user: req.session.user,
-      results: detailedRecipes,
+      results: sortedRecipes,
       searchParams: req.body,
       message:
-        detailedRecipes.length > 0
-          ? `Found ${detailedRecipes.length} recipes!`
+        sortedRecipes.length > 0
+          ? `Found ${sortedRecipes.length} recipes!`
           : 'No recipes found. Try adjusting your search criteria.',
-      error: detailedRecipes.length === 0,
+      error: sortedRecipes.length === 0,
       favoriteRecipeIds,
     });
   } catch (error) {
@@ -95,32 +64,40 @@ const handleRecipeSearch = async (req, res) => {
 const handleIngredientSearch = async (req, res) => {
   try {
     const { ingredients } = req.query;
-    const params = {
-      ingredients,
-      number: Math.min(parseInt(req.query.number, 10) || 10, 100),
-      ranking: 1,
-      ignorePantry: true,
-    };
+    const limit = Math.min(parseInt(req.query.number, 10) || 10, 100);
 
-    const response = await searchRecipesByIngredients(params);
-    const recipes = response.data || [];
-    const recipeIds = recipes.map((recipe) => recipe.id).filter((id) => !!id);
-    let detailedRecipes = await getDetailedRecipes(recipeIds.slice(0, 20));
+    if (!ingredients) {
+      const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
+      return res.render('pages/discover', {
+        user: req.session.user,
+        results: null,
+        searchParams: req.query,
+        message: 'Please provide at least one ingredient to search.',
+        error: true,
+        favoriteRecipeIds,
+      });
+    }
+
+    const recipes = await searchRecipesByIngredientsWithFallback({
+      ...req.query,
+      ingredients,
+      number: limit,
+    });
 
     const preferences = await getUserPreferences(req.session.user.id);
-    detailedRecipes = sortRecipesByPreferences(detailedRecipes, preferences);
+    const sortedRecipes = sortRecipesByPreferences(recipes, preferences);
 
     const favoriteRecipeIds = await getUserFavoriteIds(req.session.user.id);
 
     return res.render('pages/discover', {
       user: req.session.user,
-      results: detailedRecipes,
-      searchParams: { ingredients },
+      results: sortedRecipes,
+      searchParams: { ...req.query, ingredients },
       message:
-        detailedRecipes.length > 0
-          ? `Found ${detailedRecipes.length} recipes!`
+        sortedRecipes.length > 0
+          ? `Found ${sortedRecipes.length} recipes!`
           : 'No recipes found. Try different ingredients.',
-      error: detailedRecipes.length === 0,
+      error: sortedRecipes.length === 0,
       favoriteRecipeIds,
     });
   } catch (error) {

@@ -88,9 +88,15 @@
                     Remove from Favorites
                   </button>
                 </form>
+                {{#if sourceUrl}}
                 <a href="{{sourceUrl}}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
                   View Full Recipe
                 </a>
+                {{else}}
+                <a href="/recipes/{{id}}" class="btn btn-sm btn-outline-primary w-100">
+                  View Recipe Details
+                </a>
+                {{/if}}
               </div>
             </div>
           </div>

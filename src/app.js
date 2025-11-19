@@ -11,7 +11,7 @@ const discoverRoutes = require('./routes/discoverRoutes');
 const favoriteRoutes = require('./routes/favoriteRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
-
+const recipeRoutes = require('./routes/recipeRoutes');
 const app = express();
 const hbs = getHandlebarsInstance();
 
@@ -41,5 +41,6 @@ app.use('/', discoverRoutes);
 app.use('/', favoriteRoutes);
 app.use('/', settingsRoutes);
 app.use('/', dashboardRoutes);
+app.use('/', recipeRoutes);
 
 module.exports = app;

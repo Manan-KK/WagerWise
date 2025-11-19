@@ -1,9 +1,110 @@
 const {
   getRecipeInformation,
   getRecipePriceBreakdown,
+  searchRecipes: searchRecipesFromApi,
+  searchRecipesByIngredients: searchRecipesByIngredientsFromApi,
 } = require('./spoonacularService');
 const recipeRepository = require('../repositories/recipeRepository');
 const { stripHtmlTags } = require('../utils/strings');
+
+const parseInteger = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const parsed = typeof value === 'number' ? value : parseInt(value, 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+const parseFloatValue = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const parsed = typeof value === 'number' ? value : parseFloat(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+const toCommaSeparatedArray = (value) => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => `${entry}`.trim()).filter((entry) => entry.length > 0);
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }
+
+  return [];
+};
+
+const normalizeDiet = (diet) => {
+  if (!diet) {
+    return undefined;
+  }
+
+  const normalized = diet.toLowerCase().replace(/[-_]+/g, ' ').trim();
+  if (normalized === 'none' || normalized.length === 0) {
+    return undefined;
+  }
+
+  return normalized;
+};
+
+const normalizeSearchFilters = (rawFilters = {}) => {
+  const normalized = {
+    number: Math.min(parseInteger(rawFilters.number) || 10, 100),
+    query: (rawFilters.query || '').trim() || undefined,
+    diet: normalizeDiet(rawFilters.diet),
+    maxReadyTime: parseInteger(rawFilters.maxReadyTime),
+    minCalories: parseInteger(rawFilters.minCalories),
+    maxCalories: parseInteger(rawFilters.maxCalories),
+    minPrice: parseFloatValue(rawFilters.minPrice),
+    maxPrice: parseFloatValue(rawFilters.maxPrice),
+    intolerances: toCommaSeparatedArray(rawFilters.intolerances).map((entry) => entry.toLowerCase()),
+  };
+
+  if (
+    normalized.minPrice !== undefined
+    && normalized.maxPrice !== undefined
+    && normalized.minPrice > normalized.maxPrice
+  ) {
+    [normalized.minPrice, normalized.maxPrice] = [normalized.maxPrice, normalized.minPrice];
+  }
+
+  if (
+    normalized.minCalories !== undefined
+    && normalized.maxCalories !== undefined
+    && normalized.minCalories > normalized.maxCalories
+  ) {
+    [normalized.minCalories, normalized.maxCalories] = [normalized.maxCalories, normalized.minCalories];
+  }
+
+  if (normalized.number < 1) {
+    normalized.number = 1;
+  }
+
+  return normalized;
+};
+
+const normalizeIngredientSearchFilters = (rawFilters = {}) => {
+  const baseFilters = normalizeSearchFilters(rawFilters);
+  return {
+    ...baseFilters,
+    ingredients: toCommaSeparatedArray(rawFilters.ingredients || rawFilters.ingredientsList).map((entry) => entry.toLowerCase()),
+    ranking: parseInteger(rawFilters.ranking) || undefined,
+    ignorePantry:
+      typeof rawFilters.ignorePantry === 'string'
+        ? rawFilters.ignorePantry !== 'false'
+        : rawFilters.ignorePantry !== false,
+  };
+};
 
 const normalizeApiRecipe = (recipeData = {}) => {
   if (!recipeData || typeof recipeData !== 'object') {
@@ -26,6 +127,168 @@ const normalizeApiRecipe = (recipeData = {}) => {
     summary: sanitizedSummary,
     pricePerServing: normalizedPrice,
   };
+};
+
+const parseStoredRecipeRow = (row = {}) => {
+  if (!row || !row.raw_data) {
+    return null;
+  }
+
+  let rawData = row.raw_data;
+  if (typeof rawData === 'string') {
+    try {
+      rawData = JSON.parse(rawData);
+    } catch (error) {
+      console.error('Failed to parse stored recipe JSON:', error.message);
+      return null;
+    }
+  }
+
+  const normalized = normalizeApiRecipe(rawData);
+  if (!normalized) {
+    return null;
+  }
+
+  if (!normalized.id) {
+    normalized.id = row.spoonacular_id || row.recipe_id;
+  }
+  if ((normalized.pricePerServing === undefined || normalized.pricePerServing === null) && row.price_per_serving !== undefined) {
+    normalized.pricePerServing = row.price_per_serving !== null ? Number(row.price_per_serving) : null;
+  }
+  if (!normalized.readyInMinutes && row.ready_in_minutes) {
+    normalized.readyInMinutes = row.ready_in_minutes;
+  }
+  if (!normalized.summary && row.summary) {
+    normalized.summary = row.summary;
+  }
+
+  return normalized;
+};
+
+const getCaloriesFromRecipe = (recipe) => {
+  if (!recipe?.nutrition?.nutrients) {
+    return null;
+  }
+
+  const caloriesEntry = recipe.nutrition.nutrients.find((nutrient) => nutrient?.name === 'Calories');
+  if (!caloriesEntry) {
+    return null;
+  }
+
+  const calories = Number(caloriesEntry.amount);
+  return Number.isNaN(calories) ? null : calories;
+};
+
+const matchesDietPreference = (recipe, diet) => {
+  if (!diet) {
+    return true;
+  }
+
+  const normalizedDiet = diet.toLowerCase();
+  if (!recipe) {
+    return false;
+  }
+
+  const recipeDiets = Array.isArray(recipe.diets)
+    ? recipe.diets.map((entry) => entry.toLowerCase())
+    : [];
+
+  if (recipeDiets.includes(normalizedDiet)) {
+    return true;
+  }
+
+  switch (normalizedDiet) {
+    case 'vegetarian':
+      return recipe.vegetarian === true;
+    case 'vegan':
+      return recipe.vegan === true;
+    case 'gluten free':
+      return recipe.glutenFree === true;
+    case 'dairy free':
+      return recipe.dairyFree === true;
+    case 'low fodmap':
+      return recipe.lowFodmap === true;
+    case 'whole30':
+      return recipe.whole30 === true || recipeDiets.includes('whole30');
+    case 'paleo':
+      return recipeDiets.includes('paleolithic');
+    case 'primal':
+      return recipeDiets.includes('primal');
+    case 'ketogenic':
+      return recipe.ketogenic === true;
+    default:
+      return recipeDiets.includes(normalizedDiet);
+  }
+};
+
+const matchesIntolerancePreference = (recipe, intoleranceList = []) => {
+  if (!Array.isArray(intoleranceList) || intoleranceList.length === 0) {
+    return true;
+  }
+
+  const recipeDiets = Array.isArray(recipe?.diets)
+    ? recipe.diets.map((entry) => entry.toLowerCase())
+    : [];
+
+  return intoleranceList.every((rawIntolerance) => {
+    const intolerance = rawIntolerance.trim().toLowerCase();
+    if (!intolerance) {
+      return true;
+    }
+
+    const booleanField = `${intolerance.replace(/\s+/g, '')}Free`;
+    if (typeof recipe?.[booleanField] === 'boolean') {
+      return recipe[booleanField];
+    }
+
+    if (recipeDiets.includes(`${intolerance} free`)) {
+      return true;
+    }
+
+    // Without explicit metadata, we cannot confidently exclude the recipe.
+    return true;
+  });
+};
+
+const filterRecipesByConstraints = (recipes = [], filters = {}) => {
+  return recipes.filter((recipe) => {
+    if (!matchesDietPreference(recipe, filters.diet)) {
+      return false;
+    }
+
+    if (!matchesIntolerancePreference(recipe, filters.intolerances)) {
+      return false;
+    }
+
+    if (typeof filters.maxReadyTime === 'number') {
+      if (typeof recipe.readyInMinutes !== 'number' || recipe.readyInMinutes > filters.maxReadyTime) {
+        return false;
+      }
+    }
+
+    if (typeof filters.minPrice === 'number') {
+      if (typeof recipe.pricePerServing !== 'number' || recipe.pricePerServing < filters.minPrice) {
+        return false;
+      }
+    }
+
+    if (typeof filters.maxPrice === 'number') {
+      if (typeof recipe.pricePerServing !== 'number' || recipe.pricePerServing > filters.maxPrice) {
+        return false;
+      }
+    }
+
+    const calories = getCaloriesFromRecipe(recipe);
+    if (typeof filters.minCalories === 'number' && (calories === null || calories < filters.minCalories)) {
+      return false;
+    }
+
+    if (typeof filters.maxCalories === 'number' && (calories === null || calories > filters.maxCalories)) {
+      return false;
+    }
+
+    return true;
+  });
 };
 
 const recipeHasIngredientCost = (recipe) => {
@@ -121,6 +384,16 @@ const saveRecipeToDatabase = async (recipe) => {
   }
 
   return recipe;
+};
+
+const loadRecipesFromDatabase = async (filters = {}, limit = 20) => {
+  try {
+    const rows = await recipeRepository.searchStoredRecipes(filters, limit);
+    return rows.map(parseStoredRecipeRow).filter((recipe) => Boolean(recipe));
+  } catch (error) {
+    console.error('Error searching recipes from local cache:', error.message || error);
+    return [];
+  }
 };
 
 const getCachedRecipesMap = async (ids = []) => {
@@ -224,6 +497,96 @@ const getDetailedRecipes = async (recipeIds = []) => {
   );
 
   return enrichedRecipes.filter((recipe) => Boolean(recipe));
+};
+
+const fetchRecipesFromApiWithDetails = async (filters, desiredCount) => {
+  const requestSize = Math.min(Math.max(desiredCount, filters?.number || 10, 10), 100);
+  const params = {
+    number: requestSize,
+    addRecipeInformation: true,
+    addRecipeNutrition: true,
+    fillIngredients: true,
+  };
+
+  if (filters?.query) {
+    params.query = filters.query;
+  }
+  if (filters?.diet) {
+    params.diet = filters.diet;
+  }
+  if (Array.isArray(filters?.intolerances) && filters.intolerances.length > 0) {
+    params.intolerances = filters.intolerances.join(',');
+  }
+  if (typeof filters?.maxReadyTime === 'number') {
+    params.maxReadyTime = filters.maxReadyTime;
+  }
+  if (typeof filters?.minCalories === 'number') {
+    params.minCalories = filters.minCalories;
+  }
+  if (typeof filters?.maxCalories === 'number') {
+    params.maxCalories = filters.maxCalories;
+  }
+
+  try {
+    const response = await searchRecipesFromApi(params);
+    const apiResults = response.data?.results || [];
+    if (!Array.isArray(apiResults) || apiResults.length === 0) {
+      return [];
+    }
+
+    await Promise.all(
+      apiResults.map(async (recipe) => {
+        const normalized = normalizeApiRecipe(recipe);
+        if (normalized) {
+          await saveRecipeToDatabase(normalized);
+        }
+      }),
+    );
+
+    const ids = apiResults
+      .map((recipe) => recipe.id)
+      .filter((id) => Number.isInteger(id));
+
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return getDetailedRecipes(ids);
+  } catch (error) {
+    console.error('Error fetching recipes from Spoonacular:', error.response?.data || error.message);
+    return [];
+  }
+};
+
+const fetchRecipesByIngredientsFromApi = async (filters, desiredCount, seenIds = new Set()) => {
+  const requestSize = Math.min(Math.max(desiredCount, filters?.number || 10, 5), 100);
+  const params = {
+    ingredients: (filters?.ingredients || []).join(','),
+    number: requestSize,
+    ranking: typeof filters?.ranking === 'number' ? filters.ranking : 1,
+    ignorePantry: filters?.ignorePantry !== false,
+  };
+
+  if (!params.ingredients) {
+    return [];
+  }
+
+  try {
+    const response = await searchRecipesByIngredientsFromApi(params);
+    const apiResults = Array.isArray(response.data) ? response.data : [];
+    const ids = apiResults
+      .map((recipe) => recipe.id)
+      .filter((id) => Number.isInteger(id) && !seenIds.has(id));
+
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return getDetailedRecipes(ids);
+  } catch (error) {
+    console.error('Error fetching recipes by ingredients:', error.response?.data || error.message);
+    return [];
+  }
 };
 
 const ensureRecipeRecord = async (recipeId) => {
@@ -387,6 +750,78 @@ const sortRecipesByPreferences = (recipes, preferences) => {
   return sorted;
 };
 
+const searchRecipesWithFallback = async (rawFilters = {}) => {
+  const filters = normalizeSearchFilters(rawFilters);
+  const localFetchLimit = Math.min(filters.number * 3, 90);
+  const localRecipes = await loadRecipesFromDatabase(filters, localFetchLimit);
+  const filteredLocal = filterRecipesByConstraints(localRecipes, filters);
+
+  const results = [];
+  const seenIds = new Set();
+
+  filteredLocal.forEach((recipe) => {
+    if (recipe && recipe.id && !seenIds.has(recipe.id)) {
+      seenIds.add(recipe.id);
+      results.push(recipe);
+    }
+  });
+
+  if (results.length < filters.number) {
+    const needed = filters.number - results.length;
+    const apiRecipes = await fetchRecipesFromApiWithDetails(filters, Math.max(needed * 2, needed));
+    const filteredApi = filterRecipesByConstraints(apiRecipes, filters);
+
+    filteredApi.forEach((recipe) => {
+      if (recipe && recipe.id && !seenIds.has(recipe.id)) {
+        seenIds.add(recipe.id);
+        results.push(recipe);
+      }
+    });
+  }
+
+  return results.slice(0, filters.number);
+};
+
+const searchRecipesByIngredientsWithFallback = async (rawFilters = {}) => {
+  const filters = normalizeIngredientSearchFilters(rawFilters);
+  if (!filters.ingredients || filters.ingredients.length === 0) {
+    return [];
+  }
+
+  const localFilters = {
+    ...filters,
+    ingredients: filters.ingredients,
+  };
+
+  const localFetchLimit = Math.min(filters.number * 3, 90);
+  const localRecipes = await loadRecipesFromDatabase(localFilters, localFetchLimit);
+  const filteredLocal = filterRecipesByConstraints(localRecipes, filters);
+
+  const results = [];
+  const seenIds = new Set();
+
+  filteredLocal.forEach((recipe) => {
+    if (recipe && recipe.id && !seenIds.has(recipe.id)) {
+      seenIds.add(recipe.id);
+      results.push(recipe);
+    }
+  });
+
+  if (results.length < filters.number) {
+    const needed = filters.number - results.length;
+    const apiRecipes = await fetchRecipesByIngredientsFromApi(filters, Math.max(needed * 2, needed), seenIds);
+    const filteredApi = filterRecipesByConstraints(apiRecipes, filters);
+    filteredApi.forEach((recipe) => {
+      if (recipe && recipe.id && !seenIds.has(recipe.id)) {
+        seenIds.add(recipe.id);
+        results.push(recipe);
+      }
+    });
+  }
+
+  return results.slice(0, filters.number);
+};
+
 module.exports = {
   normalizeApiRecipe,
   applyPriceBreakdownToRecipe,
@@ -395,4 +830,6 @@ module.exports = {
   ensureRecipeRecord,
   buildGroceryList,
   sortRecipesByPreferences,
+  searchRecipesWithFallback,
+  searchRecipesByIngredientsWithFallback,
 };
