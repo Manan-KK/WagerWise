@@ -1,46 +1,172 @@
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card shadow">
-        <div class="card-body p-5">
-          <h2 class="card-title text-center mb-4">Welcome to BudgetBites</h2>
-          <p class="text-center text-muted mb-4">Sign in to plan your meals and save money</p>
-          
-          {{> message}}
-          
-          <form action="/login" method="POST">
-            <div class="mb-3">
-              <label for="username" class="form-label">Username or Email</label>
-              <input 
-                type="text" 
-                class="form-control" 
-                id="username" 
-                name="username" 
-                placeholder="Enter your username or email"
-                value="{{form.username}}"
-                required
-                autofocus>
+<div class="login-page bg-body-tertiary py-5">
+  <div class="container">
+    <div class="row justify-content-center align-items-center g-5">
+      <div class="col-12 col-lg-5">
+        <section class="login-hero card border-0 shadow-lg h-100">
+          <div class="card-body p-5">
+            <span class="badge text-bg-success-subtle text-success-emphasis text-uppercase fw-semibold mb-3">BudgetBites</span>
+            <h1 class="display-6 fw-bold text-dark mb-3">Welcome back to BudgetBites</h1>
+            <p class="text-muted mb-4">Sign in to access your personalized meal plans, grocery lists, and budget tracking tools.</p>
+            <ul class="list-unstyled d-flex flex-column gap-3 text-muted mb-4">
+              <li class="d-flex align-items-center">
+                <span class="login-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-cart-check"></i></span>
+                <span>Manage your weekly grocery lists and meal planning.</span>
+              </li>
+              <li class="d-flex align-items-center">
+                <span class="login-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-wallet2"></i></span>
+                <span>Track spending and stay within your budget.</span>
+              </li>
+              <li class="d-flex align-items-center">
+                <span class="login-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-heart"></i></span>
+                <span>Save your favorite recipes for quick access.</span>
+              </li>
+            </ul>
+            <div class="login-cta border-top pt-4">
+              <p class="fw-semibold text-dark mb-2">New to BudgetBites?</p>
+              <a href="/register" class="btn btn-outline-success btn-lg w-100">
+                <i class="bi bi-person-plus me-2"></i>Create an account
+              </a>
             </div>
-            <div class="mb-3">
-              <label for="password" class="form-label">Password</label>
-              <input 
-                type="password" 
-                class="form-control" 
-                id="password" 
-                name="password" 
-                placeholder="Enter your password"
-                required>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-12 col-lg-5">
+        <div class="login-form card border-0 shadow-lg">
+          <div class="card-body p-5">
+            <h2 class="fw-semibold text-dark mb-2 text-center">Sign in to your account</h2>
+            <p class="text-muted text-center mb-4">Enter your credentials to access your dashboard</p>
+
+            {{> message}}
+
+            <form action="/login" method="POST" class="row gy-3">
+              <div class="col-12">
+                <label for="username" class="form-label">Username or Email</label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text bg-transparent border-end-0">
+                    <i class="bi bi-person-circle text-success"></i>
+                  </span>
+                  <input 
+                    type="text" 
+                    class="form-control border-start-0 ps-0" 
+                    id="username" 
+                    name="username" 
+                    placeholder="Enter your username or email"
+                    value="{{form.username}}"
+                    required
+                    autofocus>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label for="password" class="form-label">Password</label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text bg-transparent border-end-0">
+                    <i class="bi bi-shield-lock text-success"></i>
+                  </span>
+                  <input 
+                    type="password" 
+                    class="form-control border-start-0 ps-0" 
+                    id="password" 
+                    name="password" 
+                    placeholder="Enter your password"
+                    required>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="d-grid">
+                  <button type="submit" class="btn btn-success btn-lg shadow-sm">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Sign in
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            <div class="text-center mt-4">
+              <p class="mb-0 text-muted">Don't have an account? <a href="/register">Register here</a></p>
             </div>
-            <div class="d-grid">
-              <button type="submit" class="btn btn-primary btn-lg">Login</button>
-            </div>
-          </form>
-          
-          <div class="text-center mt-4">
-            <p class="mb-0">Don't have an account? <a href="/register">Register here</a></p>
           </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  .login-page {
+    min-height: calc(100vh - 120px);
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.12) 0%, rgba(22, 163, 74, 0.08) 40%, rgba(255, 255, 255, 0.85) 100%);
+  }
+
+  .login-hero {
+    background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.92) 60%, rgba(236, 253, 245, 0.9) 100%);
+    border-radius: 2rem;
+  }
+
+  .login-form {
+    border-radius: 2rem;
+  }
+
+  .login-form .form-label {
+    font-weight: 600;
+    color: #1f2933;
+  }
+
+  .login-form .form-control,
+  .login-form .input-group-text {
+    border-radius: 1rem;
+  }
+
+  .login-form .form-control:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 0.25rem rgba(34, 197, 94, 0.25);
+  }
+
+  .login-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    font-size: 1.25rem;
+  }
+
+  .login-cta {
+    border-color: rgba(148, 163, 184, 0.35) !important;
+  }
+
+  .btn-success {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    border: none;
+  }
+
+  .btn-success:hover {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  }
+
+  .btn-outline-success:hover {
+    background-color: #22c55e;
+    border-color: #22c55e;
+  }
+
+  @media (max-width: 991.98px) {
+    .login-hero {
+      text-align: center;
+    }
+
+    .login-hero ul {
+      align-items: center;
+    }
+
+    .login-hero li {
+      justify-content: center;
+    }
+
+    .login-icon {
+      margin-right: 0 !important;
+    }
+  }
+</style>
