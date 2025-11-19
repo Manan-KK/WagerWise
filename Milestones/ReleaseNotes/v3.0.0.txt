@@ -1,0 +1,74 @@
+Week 3 Release Notes: 
+
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+
+### Exciting New Features 🎉
+* **Enhanced Registration Experience** - Complete redesign of registration page with hero section and improved user guidance
+* **Improved Login Interface** - Modernized login page with better visual design and user experience
+* **Enhanced Discover Page** - Redesigned discover page with hero section and better visual hierarchy
+
+### Frontend Changes ✨
+* **Registration Page Redesign**:
+  - Two-column layout with hero section showcasing BudgetBites benefits
+  - Professional gradient backgrounds with green/success color scheme
+  - Icon-enhanced input fields with Bootstrap Icons
+  - Clear requirements display and password guidance
+  - Improved card styling with rounded corners (2rem border radius)
+  - Better responsive design for mobile devices
+  - Visual feature highlights (budget tracking, nutrition profiles, quick meal plans)
+  - Enhanced call-to-action buttons with gradient effects
+* **Login Page Redesign**:
+  - Matching two-column layout with hero section
+  - Consistent green/success color scheme with registration page
+  - Icon-enhanced form inputs for better visual feedback
+  - Feature highlights showcasing app benefits
+  - Improved visual hierarchy and spacing
+  - Better responsive behavior on mobile devices
+  - Enhanced button styling with hover effects
+* **Discover Page Enhancements**:
+  - New hero section with engaging visual design
+  - Statistics cards showing key features (10+ filters, <30 min ready time, $5 avg cost)
+  - Featured recipe showcase in hero section
+  - Improved visual hierarchy with better spacing
+  - Enhanced gradient backgrounds and card styling
+  - Better organization of search filters
+  - More engaging and informative layout
+* **Form Validation Improvements**:
+  - Better error messaging for registration form
+  - Clear field-specific validation feedback
+  - Improved user guidance on requirements
+  - Enhanced visual feedback for form errors
+* **Color Scheme Updates**:
+  - Green/success color scheme implementation across authentication pages
+  - Updated logo color to match new design system
+  - Consistent color palette with gradient effects
+  - Better visual consistency across pages
+* **UI Polish**:
+  - Enhanced input group styling with icons
+  - Improved button gradients and hover states
+  - Better card shadows and elevation
+  - Enhanced badge styling
+  - Improved responsive breakpoints
+  - Better mobile-first design approach
+
+### Backend Changes 🔧
+* **Registration Validation**:
+  - Enhanced error handling for registration failures
+  - Better user feedback on validation errors
+  - Improved form data persistence on errors
+  - Clearer error messages for duplicate usernames/emails
+
+### Other Changes
+* CSS styling improvements across authentication pages
+* Better integration of Bootstrap Icons
+* Enhanced responsive design patterns
+* Improved accessibility with better form labels and structure
+
+## New Contributors
+* UI/UX improvements and page redesigns
+
+**Full Changelog**: https://github.com/Manan-KK/BudgetBites/compare/v2.0.0...v2.1.0
+
