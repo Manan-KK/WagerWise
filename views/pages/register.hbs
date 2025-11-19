@@ -70,13 +70,87 @@
             <div class="d-grid">
               <button type="submit" class="btn btn-primary btn-lg">Register</button>
             </div>
-          </form>
-          
-          <div class="text-center mt-4">
-            <p class="mb-0">Already have an account? <a href="/login">Login here</a></p>
           </div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  .register-page {
+    min-height: calc(100vh - 120px);
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.12) 0%, rgba(22, 163, 74, 0.08) 40%, rgba(255, 255, 255, 0.85) 100%);
+  }
+
+  .register-hero {
+    background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.92) 60%, rgba(236, 253, 245, 0.9) 100%);
+    border-radius: 2rem;
+  }
+
+  .register-form {
+    border-radius: 2rem;
+  }
+
+  .register-form .form-label {
+    font-weight: 600;
+    color: #1f2933;
+  }
+
+  .register-form .form-control,
+  .register-form .input-group-text {
+    border-radius: 1rem;
+  }
+
+  .register-form .form-control:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 0.25rem rgba(34, 197, 94, 0.25);
+  }
+
+  .register-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    font-size: 1.25rem;
+  }
+
+  .register-cta {
+    border-color: rgba(148, 163, 184, 0.35) !important;
+  }
+
+  .btn-success {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    border: none;
+  }
+
+  .btn-success:hover {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  }
+
+  .btn-outline-success:hover {
+    background-color: #22c55e;
+    border-color: #22c55e;
+  }
+
+  @media (max-width: 991.98px) {
+    .register-hero {
+      text-align: center;
+    }
+
+    .register-hero ul {
+      align-items: center;
+    }
+
+    .register-hero li {
+      justify-content: center;
+    }
+
+    .register-icon {
+      margin-right: 0 !important;
+    }
+  }
+</style>
