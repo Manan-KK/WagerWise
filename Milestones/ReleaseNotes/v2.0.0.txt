@@ -6,10 +6,86 @@ Week 2 Release Notes:
 ## What's Changed
 
 ### Exciting New Features 🎉
-* **Comprehensive Testing Infrastructure** - Full test suite implementation for server-side functionality
-* **Test-Driven Development Setup** - Complete testing environment with mocking and stubbing capabilities
+* **User Preferences System** - Comprehensive meal sorting and prioritization preferences
+* **Personalized Recipe Recommendations** - Recipes automatically sorted based on user preferences
+* **Enhanced Settings Page** - Expanded settings with meal planning customization options
+
+### Recipe & Meal Planning Features 🍳
+* **Customizable Recipe Sorting**:
+  - Sort by relevance, price, time, calories, health score, or popularity
+  - Ascending or descending sort order
+  - Priority factor weighting system (1-10 scale) for:
+    - Price (cost per serving)
+    - Time (ready time)
+    - Calories
+    - Health score
+  - Intelligent recipe scoring algorithm that combines multiple factors
+  - Preferences automatically applied to all recipe searches and grocery list generation
+* **Dashboard Preferences Display**:
+  - Quick view of current sorting preferences on dashboard
+  - Visual display of priority factor weights
+  - Easy access to preferences settings
+
+### Frontend Changes ✨
+* **Professional Color Scheme**:
+  - Modern blue and grey palette with CSS custom properties
+  - Primary blue (#2563eb) with dark and light variants
+  - Secondary grey tones (#64748b) for text and accents
+  - Consistent color system across all pages
+* **Enhanced Card Design**:
+  - Improved card shadows with hover effects
+  - Smooth transitions and animations
+  - Better visual hierarchy with rounded corners (12px border radius)
+  - Card hover effects with elevation and shadow changes
+* **Improved Button Styling**:
+  - Enhanced button hover states with subtle animations
+  - Better visual feedback on interactions
+  - Consistent button sizing and spacing
+  - Improved outline button styles
+* **Form Enhancements**:
+  - Better form control styling with focus states
+  - Improved input borders and shadows
+  - Enhanced select dropdown styling
+  - Range slider controls for priority factors with live value display
+  - Better form label typography
+* **Settings Page Redesign**:
+  - Expanded settings page with three sections (Username, Password, Preferences)
+  - Professional card layout with shadow effects
+  - Interactive range sliders for priority factors
+  - Real-time value display for slider inputs
+  - Clear visual separation between settings sections
+* **Dashboard Improvements**:
+  - Enhanced dashboard layout with card-based statistics
+  - Better organization of user information
+  - Preferences quick view section
+  - Improved responsive grid layout
+  - Better visual hierarchy and spacing
+* **Recipe Card Enhancements**:
+  - Improved badge styling with subtle backgrounds
+  - Better image handling with object-fit
+  - Enhanced card hover effects
+  - Improved information hierarchy
+  - Better spacing and typography
+* **UI Polish**:
+  - Custom scrollbar styling matching color scheme
+  - Smooth page transition animations
+  - Improved alert styling with better colors
+  - Enhanced navbar with hover effects
+  - Better responsive design for mobile devices
+  - Improved loading states and visual feedback
 
 ### Backend Changes 🔧
+* **User Preferences System**:
+  - `getUserPreferences()` function to retrieve user preferences
+  - `saveUserPreferences()` function to update preferences
+  - `sortRecipesByPreferences()` algorithm for intelligent recipe sorting
+  - Automatic preference application to all recipe searches
+  - Default preferences fallback when user hasn't set preferences
+* **Preferences Integration**:
+  - Preferences loaded on dashboard, discover, favorites, and grocery list pages
+  - Recipe sorting applied to search results
+  - Preferences used in grocery list generation
+  - Settings route for updating preferences (`/settings/preferences`)
 * **Testing Framework Integration**:
   - Mocha test runner configuration
   - Chai assertion library with HTTP plugin for API testing
@@ -26,6 +102,16 @@ Week 2 Release Notes:
   - Test user builder helpers
   - Database behavior reset utilities for test isolation
 
+### API & Database Changes 🗄️
+* **User Preferences Table**:
+  - New `user_preferences` table with user-specific settings
+  - Sort by and sort order columns
+  - JSONB column for priority factors (price, time, calories, health)
+  - Automatic timestamp tracking (created_at, updated_at)
+  - Foreign key relationship with users table
+  - Database index on user_id for optimized queries
+  - Default preference values for new users
+
 ### Other Changes
 * Updated release configuration - Removed `Semver-Major` label from Breaking Changes category in `.github/release.yml`
 * Package dependency updates:
@@ -35,6 +121,10 @@ Week 2 Release Notes:
 * Test script configuration in `package.json`:
   - `test` script for running Mocha test suite
   - `testandrun` script for automated testing before server startup
+* CSS architecture improvements:
+  - CSS custom properties (variables) for consistent theming
+  - Modular CSS organization
+  - Better maintainability and scalability
 
 ## Testing Details
 
@@ -59,6 +149,7 @@ Week 2 Release Notes:
 
 ## New Contributors
 * Testing infrastructure and test suite implementation
+* User preferences system and UI/UX enhancements
 
-**Full Changelog**: https://github.com/Manan-KK/BudgetBites/compare/v1.0.0...v1.1.0
+**Full Changelog**: https://github.com/Manan-KK/BudgetBites/compare/v1.0.0...v2.0.0
 

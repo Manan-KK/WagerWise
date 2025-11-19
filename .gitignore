@@ -1,7 +1,7 @@
 node_modules/
-# .env - Commented out to allow team testing .env file
+.env - Commented out to allow team testing .env file
 # Uncomment this line when deploying to production
-# .env
+.env
 *.log
 .DS_Store
 

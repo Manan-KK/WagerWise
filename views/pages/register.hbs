@@ -1,109 +1,74 @@
-<div class="register-page bg-body-tertiary py-5">
-  <div class="container">
-    <div class="row justify-content-center align-items-center g-5">
-      <div class="col-12 col-lg-5">
-        <section class="register-hero card border-0 shadow-lg h-100">
-          <div class="card-body p-5">
-            <span class="badge text-bg-success-subtle text-success-emphasis text-uppercase fw-semibold mb-3">BudgetBites</span>
-            <h1 class="display-6 fw-bold text-dark mb-3">Sign up and start planning smarter meals.</h1>
-            <p class="text-muted mb-4">Get access to curated recipes, adaptive grocery lists, and budgeting tools built for busy students.</p>
-            <ul class="list-unstyled d-flex flex-column gap-3 text-muted mb-4">
-              <li class="d-flex align-items-center">
-                <span class="register-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-graph-up"></i></span>
-                <span>Track your spending and keep every week on budget.</span>
-              </li>
-              <li class="d-flex align-items-center">
-                <span class="register-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-nutrition"></i></span>
-                <span>Personalized nutrition profiles for your dietary goals.</span>
-              </li>
-              <li class="d-flex align-items-center">
-                <span class="register-icon me-3 text-success-emphasis bg-success-subtle"><i class="bi bi-lightning-charge"></i></span>
-                <span>Quick meal plans tailored to your schedule.</span>
-              </li>
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow">
+        <div class="card-body p-5">
+          <h2 class="card-title text-center mb-4">Create Account</h2>
+          <p class="text-center text-muted mb-4">Join BudgetBites to start planning affordable meals</p>
+
+          <div class="alert alert-info" role="alert">
+            <strong>Registration requirements</strong>
+            <ul class="mb-0 ps-3">
+              <li>Username is required (letters/numbers only)</li>
+              <li>Use a valid email address (lowercased automatically)</li>
+              <li>Password must be at least 6 characters long</li>
             </ul>
-            <div class="register-cta border-top pt-4">
-              <p class="fw-semibold text-dark mb-2">Already part of the community?</p>
-              <a href="/login" class="btn btn-outline-success btn-lg w-100">
-                <i class="bi bi-box-arrow-in-right me-2"></i>Log in instead
-              </a>
-            </div>
           </div>
-        </section>
-      </div>
 
-      <div class="col-12 col-lg-5">
-        <div class="register-form card border-0 shadow-lg">
-          <div class="card-body p-5">
-            <h2 class="fw-semibold text-dark mb-2 text-center">Create your free account</h2>
-            <p class="text-muted text-center mb-4">Join thousands of students cooking better on a budget.</p>
-
-            {{> message}}
-
-            <form action="/register" method="POST" class="row gy-3">
-              <div class="col-12">
-                <label for="username" class="form-label">Username</label>
-                <div class="input-group input-group-lg">
-                  <span class="input-group-text bg-transparent border-end-0">
-                    <i class="bi bi-person-circle text-success"></i>
-                  </span>
-                  <input 
-                    type="text" 
-                    class="form-control border-start-0 ps-0" 
-                    id="username" 
-                    name="username" 
-                    placeholder="Choose a username"
-                    value="{{form.username}}"
-                    required
-                    autofocus>
-                </div>
+          {{> message}}
+          
+          <form action="/register" method="POST" novalidate>
+            <div class="mb-3">
+              <label for="username" class="form-label">Username</label>
+              <input 
+                type="text" 
+                class="form-control {{#if errors.username}}is-invalid{{/if}}" 
+                id="username" 
+                name="username" 
+                placeholder="Choose a username"
+                value="{{form.username}}"
+                required
+                autofocus>
+              {{#if errors.username}}
+              <div class="invalid-feedback">
+                {{errors.username}}
               </div>
-
-              <div class="col-12">
-                <label for="email" class="form-label">Email</label>
-                <div class="input-group input-group-lg">
-                  <span class="input-group-text bg-transparent border-end-0">
-                    <i class="bi bi-envelope-open text-success"></i>
-                  </span>
-                  <input 
-                    type="email" 
-                    class="form-control border-start-0 ps-0" 
-                    id="email" 
-                    name="email" 
-                    placeholder="you@example.com"
-                    value="{{form.email}}"
-                    required>
-                </div>
+              {{/if}}
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input 
+                type="email" 
+                class="form-control {{#if errors.email}}is-invalid{{/if}}" 
+                id="email" 
+                name="email" 
+                placeholder="you@example.com"
+                value="{{form.email}}"
+                required>
+              {{#if errors.email}}
+              <div class="invalid-feedback">
+                {{errors.email}}
               </div>
-
-              <div class="col-12">
-                <label for="password" class="form-label">Password</label>
-                <div class="input-group input-group-lg">
-                  <span class="input-group-text bg-transparent border-end-0">
-                    <i class="bi bi-shield-lock text-success"></i>
-                  </span>
-                  <input 
-                    type="password" 
-                    class="form-control border-start-0 ps-0" 
-                    id="password" 
-                    name="password" 
-                    placeholder="Create a password"
-                    minlength="6"
-                    required>
-                </div>
-                <small class="text-muted d-block mt-2">Use 6+ characters with a mix of letters and numbers.</small>
+              {{/if}}
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input 
+                type="password" 
+                class="form-control {{#if errors.password}}is-invalid{{/if}}" 
+                id="password" 
+                name="password" 
+                placeholder="Create a password"
+                minlength="6"
+                required>
+              {{#if errors.password}}
+              <div class="invalid-feedback">
+                {{errors.password}}
               </div>
-
-              <div class="col-12">
-                <div class="d-grid">
-                  <button type="submit" class="btn btn-success btn-lg shadow-sm">
-                    <i class="bi bi-stars me-2"></i>Register
-                  </button>
-                </div>
-              </div>
-            </form>
-
-            <div class="text-center mt-4">
-              <p class="mb-0 text-muted">Already have an account? <a href="/login">Login here</a></p>
+              {{/if}}
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-primary btn-lg">Register</button>
             </div>
           </div>
         </div>

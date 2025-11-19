@@ -44,7 +44,7 @@ BLOCKERS:
 - Repository access issues - TA notified, expected resolution tonight
 
 ================================================================================
-SESSION 2 - November 1, 2025
+SESSION 2 - November 5, 2025
 ================================================================================
 
 MEETING SUMMARY:
