@@ -1,11 +1,11 @@
 /* BudgetBites - Custom Styles */
 
 :root {
-  --primary-color: #2563eb;
-  --primary-dark: #1e40af;
-  --primary-light: #3b82f6;
+  --primary-color: #22c55e;
+  --primary-dark: #16a34a;
+  --primary-light: #4ade80;
   --secondary-color: #64748b;
-  --accent-color: #0ea5e9;
+  --accent-color: #10b981;
   --background-color: #f8fafc;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
@@ -13,7 +13,7 @@
   --grey-medium: #cbd5e1;
   --grey-dark: #475569;
   --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --card-shadow-hover: 0 4px 16px rgba(37, 99, 235, 0.15);
+  --card-shadow-hover: 0 4px 16px rgba(34, 197, 94, 0.15);
   --border-radius: 12px;
   --transition: all 0.3s ease;
 }
@@ -56,7 +56,7 @@ body {
 
 .nav-link:hover {
   color: var(--primary-color) !important;
-  background-color: rgba(37, 99, 235, 0.1);
+  background-color: rgba(34, 197, 94, 0.1);
 }
 
 /* Card Enhancements */
@@ -99,7 +99,7 @@ body {
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 8px rgba(34, 197, 94, 0.3);
 }
 
 .btn-success {
@@ -140,7 +140,7 @@ body {
 .form-control:focus,
 .form-select:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.25);
 }
 
 .form-label {
@@ -337,7 +337,7 @@ footer {
 
 .form-check-input:focus {
   border-color: var(--primary-light);
-  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.25);
 }
 
 /* Recipe Summary Scroll */
