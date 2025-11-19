@@ -433,6 +433,133 @@ footer {
   margin-right: auto;
 }
 
+/* Container XXL Centering */
+.container-xxl {
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* Center hero section content */
+.discover-hero .row {
+  align-items: center;
+}
+
+.discover-hero .col-lg-7,
+.discover-hero .col-lg-8 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.discover-hero .col-lg-5,
+.discover-hero .col-lg-4 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Center dashboard action cards */
+.row.g-4 {
+  justify-content: center;
+}
+
+.row.g-4 > [class*="col-"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.row.g-4 > [class*="col-"] > .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.row.g-4 > [class*="col-"] > .card > .card-body {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+/* Center empty states */
+.text-center {
+  text-align: center !important;
+}
+
+/* Ensure proper alignment for card headers */
+.card-header {
+  display: flex;
+  align-items: center;
+}
+
+/* Center form sections */
+.card-body form {
+  width: 100%;
+}
+
+/* Center buttons in text-center cards */
+.card-body.text-center .btn {
+  display: inline-block;
+}
+
+/* Ensure recipe cards are properly aligned */
+.row.row-cols-1.row-cols-md-2.row-cols-lg-3 {
+  justify-content: center;
+}
+
+.row.row-cols-1.row-cols-md-2.row-cols-lg-3 > .col {
+  display: flex;
+  flex-direction: column;
+}
+
+.row.row-cols-1.row-cols-md-2.row-cols-lg-3 > .col > .card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Center alert messages */
+.alert {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+}
+
+/* Center card headers content */
+.card-header > div {
+  width: 100%;
+}
+
+/* Center form rows */
+form .row {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Ensure proper centering for all page containers */
+.discover-page .container-xxl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.discover-page .container-xxl > .row {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Center section elements */
+section {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* Settings Page Specific - Remove restrictive width */
 .container.mt-5 .row.justify-content-center {
   justify-content: flex-start !important;
@@ -485,5 +612,54 @@ footer {
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Discover Page Styling - Applied to all pages */
+.discover-page {
+  background: linear-gradient(180deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.08) 35%, rgba(255, 255, 255, 0.9) 100%);
+}
+
+.discover-hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f4a261 100%);
+}
+
+.text-white-75 {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.discover-hero .badge {
+  letter-spacing: 0.08em;
+}
+
+.discover-hero-illustration {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 1.5rem;
+}
+
+.discover-hero-illustration .discover-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.discover-stat {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  min-width: 140px;
+}
+
+.discover-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+@media (max-width: 767.98px) {
+  .discover-hero {
+    padding: 2.5rem !important;
+  }
 }
 

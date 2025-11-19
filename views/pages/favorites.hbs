@@ -1,34 +1,73 @@
-<div class="container mt-4">
-  <div class="row mb-3">
-    <div class="col">
-      <h1 class="mb-2">Favorite Recipes</h1>
-      <p class="text-muted mb-0">Save go-to meals and build grocery lists from your personal cookbook.</p>
-    </div>
-  </div>
+<div class="discover-page bg-body-tertiary py-5">
+  <div class="container-xxl px-3 px-md-4">
+    <div class="row">
+      <div class="col-12">
+        <section class="discover-hero position-relative overflow-hidden rounded-5 p-5 p-md-6 mb-5 text-white">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+              <span class="badge text-bg-light text-uppercase fw-semibold mb-3 shadow-sm">Your personal cookbook</span>
+              <h1 class="display-5 fw-bold mb-3">Favorite Recipes</h1>
+              <p class="lead text-white-75 mb-4">Save go-to meals and build grocery lists from your personal collection of favorite recipes.</p>
+            </div>
+            <div class="col-lg-5">
+              <div class="discover-hero-illustration card border-0 shadow-lg">
+                <div class="card-body p-4">
+                  <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                      <p class="text-uppercase text-muted small mb-1">Quick actions</p>
+                      <h5 class="mb-0 text-dark">Manage Favorites</h5>
+                    </div>
+                    <span class="badge rounded-pill text-bg-success">Saved</span>
+                  </div>
+                  <ul class="list-unstyled small text-muted mb-0">
+                    <li class="d-flex align-items-center mb-2">
+                      <span class="discover-dot bg-success-subtle me-2"></span>
+                      Build grocery lists
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                      <span class="discover-dot bg-warning-subtle me-2"></span>
+                      Organize your meals
+                    </li>
+                    <li class="d-flex align-items-center">
+                      <span class="discover-dot bg-info-subtle me-2"></span>
+                      Quick access anytime
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-  {{#if message}}
-  <div class="alert alert-{{#if error}}danger{{else}}info{{/if}}">
-    {{message}}
-  </div>
-  {{/if}}
+        {{#if message}}
+        <div class="alert alert-{{#if error}}danger{{else}}success{{/if}} alert-dismissible fade show shadow-sm mb-5" role="alert">
+          {{message}}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {{/if}}
 
-  {{#if favorites.length}}
-  <form method="POST" action="/discover/grocery-list" id="favoritesGroceryForm"></form>
+        {{#if favorites.length}}
+        <form method="POST" action="/discover/grocery-list" id="favoritesGroceryForm"></form>
 
-  <div class="card">
-    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-      <h5 class="mb-0">Saved Recipes</h5>
-      <button 
-        type="submit" 
-        class="btn btn-success" 
-        id="favoritesGroceryButton" 
-        form="favoritesGroceryForm"
-        disabled>
-        Build Grocery List (<span id="favoriteSelectedCount">0</span>)
-      </button>
-    </div>
-    <div class="card-body">
-      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        <section class="card border-0 shadow-lg mb-5">
+          <div class="card-header bg-white py-4 px-4 px-md-5 border-0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 w-100">
+              <div>
+                <p class="text-uppercase text-secondary small fw-semibold mb-1">Your saved recipes</p>
+                <h5 class="mb-0 fw-semibold">Select recipes to build your grocery list</h5>
+              </div>
+              <button 
+                type="submit" 
+                class="btn btn-success btn-lg" 
+                id="favoritesGroceryButton" 
+                form="favoritesGroceryForm"
+                disabled>
+                Build Grocery List (<span id="favoriteSelectedCount">0</span>)
+              </button>
+            </div>
+          </div>
+          <div class="card-body px-4 px-md-5 pb-5">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
         {{#each favorites}}
         <div class="col">
           <div class="card h-100 shadow-sm">
@@ -101,16 +140,25 @@
             </div>
           </div>
         </div>
-        {{/each}}
+            {{/each}}
+          </div>
+        </div>
+        </section>
+        {{else}}
+        <section class="card border-0 shadow-lg">
+          <div class="card-body text-center py-5 px-4 px-md-5">
+            <div class="mb-4">
+              <i class="bi bi-heart" style="font-size: 4rem; color: var(--grey-medium);"></i>
+            </div>
+            <h3 class="fw-bold mb-3">No favorites yet</h3>
+            <p class="lead text-muted mb-4">Start saving recipes you love to build your personal cookbook.</p>
+            <a href="/discover" class="btn btn-primary btn-lg">Start Discovering Recipes</a>
+          </div>
+        </section>
+        {{/if}}
       </div>
     </div>
   </div>
-  {{else}}
-  <div class="text-center py-5">
-    <p class="lead mb-3">You have not saved any recipes yet.</p>
-    <a href="/discover" class="btn btn-primary">Start discovering recipes</a>
-  </div>
-  {{/if}}
 </div>
 
 <script>

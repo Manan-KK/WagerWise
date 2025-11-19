@@ -1,102 +1,102 @@
-<div class="container mt-5">
-  <div class="row mb-4">
-    <div class="col">
-      <h1 class="mb-2">Dashboard</h1>
-      <p class="text-muted mb-0">Track your favorites, preferences, and meal planning shortcuts.</p>
-    </div>
-  </div>
-
-  {{#if message}}
-  <div class="alert alert-{{#if error}}danger{{else}}info{{/if}}">
-    {{message}}
-  </div>
-  {{/if}}
-
-  <div class="row g-4">
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm">
-        <div class="card-body">
-          <h6 class="text-uppercase text-muted">Saved Recipes</h6>
-          <h2 class="display-6">{{favoriteCount}}</h2>
-          <p class="text-muted">Ready-to-cook meals in your personal collection.</p>
-          <a href="/favorites" class="btn btn-outline-primary btn-sm">Manage Favorites</a>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-8">
-      <div class="card h-100 shadow-sm">
-        <div class="card-header">
-          Recently Favorited Recipes
-        </div>
-        <div class="card-body">
-          {{#if recentFavorites.length}}
-          <div class="list-group list-group-flush">
-            {{#each recentFavorites}}
-            <div class="list-group-item">
-              <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                  <h6 class="mb-1">{{title}}</h6>
-                  <small class="text-muted">Saved {{formatDate favoritedAt}}</small>
-                </div>
-                <div class="text-end">
-                  {{#if totalCostPerServing}}
-                  <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
-                    {{formatCurrency totalCostPerServing}} / serving
-                  </span>
-                  {{/if}}
-                  {{#if readyInMinutes}}
-                  <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
-                    {{readyInMinutes}} min
-                  </span>
-                  {{/if}}
+<div class="discover-page bg-body-tertiary py-5">
+  <div class="container-xxl px-3 px-md-4">
+    <div class="row">
+      <div class="col-12">
+        <section class="discover-hero position-relative overflow-hidden rounded-5 p-5 p-md-6 mb-5 text-white">
+          <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+              <span class="badge text-bg-light text-uppercase fw-semibold mb-3 shadow-sm">Welcome back</span>
+              <h1 class="display-5 fw-bold mb-3">Your BudgetBites Dashboard</h1>
+              <p class="lead text-white-75 mb-4">Track your meal planning progress, manage your favorites, and discover new recipes that fit your lifestyle.</p>
+              <div class="d-flex flex-wrap gap-3">
+                <a href="/discover" class="btn btn-light btn-lg">
+                  Discover Recipes
+                </a>
+                <a href="/favorites" class="btn btn-outline-light btn-lg">
+                  View Favorites
+                </a>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="discover-hero-illustration card border-0 shadow-lg">
+                <div class="card-body p-4">
+                  <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                      <p class="text-uppercase text-muted small mb-1">Quick stats</p>
+                      <h5 class="mb-0 text-dark">Your Progress</h5>
+                    </div>
+                    <span class="badge rounded-pill text-bg-success">Active</span>
+                  </div>
+                  <ul class="list-unstyled small text-muted mb-0">
+                    <li class="d-flex align-items-center mb-2">
+                      <span class="discover-dot bg-success-subtle me-2"></span>
+                      Meal planning made easy
+                    </li>
+                    <li class="d-flex align-items-center mb-2">
+                      <span class="discover-dot bg-warning-subtle me-2"></span>
+                      Budget-friendly options
+                    </li>
+                    <li class="d-flex align-items-center">
+                      <span class="discover-dot bg-info-subtle me-2"></span>
+                      Personalized recommendations
+                    </li>
+                  </ul>
                 </div>
               </div>
-              {{#if summary}}
-              <p class="small text-muted mb-0 mt-2">{{summary}}</p>
-              {{/if}}
             </div>
-            {{/each}}
           </div>
-          {{else}}
-          <p class="text-muted mb-0">Save recipes to see your personalized recommendations here.</p>
-          {{/if}}
-        </div>
-      </div>
-    </div>
-  </div>
+        </section>
 
-  <div class="row g-4 mt-1">
-    <div class="col-md-6">
-      <div class="card h-100 shadow-sm">
-        <div class="card-header">
-          Meal Sorting Preferences
-        </div>
-        <div class="card-body">
-          {{#if preferences}}
-          <p class="mb-1"><strong>Sort by:</strong> {{preferences.sort_by}} ({{preferences.sort_order}})</p>
-          <p class="mb-3 text-muted small">Priority weights:</p>
-          <ul class="list-unstyled small mb-0">
-            <li>Price: {{preferences.priority_factors.price}}</li>
-            <li>Time: {{preferences.priority_factors.time}}</li>
-            <li>Calories: {{preferences.priority_factors.calories}}</li>
-            <li>Health: {{preferences.priority_factors.health}}</li>
-          </ul>
-          {{else}}
-          <p class="text-muted mb-0">Using default recommendations. Update them under <a href="/settings">Settings</a>.</p>
-          {{/if}}
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card h-100 shadow-sm">
-        <div class="card-header">
-          Quick Actions
-        </div>
-        <div class="card-body d-grid gap-2">
-          <a href="/discover" class="btn btn-primary">Discover Recipes</a>
-          <a href="/favorites" class="btn btn-outline-primary">Plan from Favorites</a>
-          <a href="/settings" class="btn btn-outline-secondary">Adjust Preferences</a>
-        </div>
+        <section class="card border-0 shadow-lg mb-5">
+          <div class="card-header bg-white py-4 px-4 px-md-5 border-0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 w-100">
+              <div>
+                <p class="text-uppercase text-secondary small fw-semibold mb-1">Overview</p>
+                <h5 class="mb-0 fw-semibold">Your Meal Planning Hub</h5>
+              </div>
+            </div>
+          </div>
+          <div class="card-body px-4 px-md-5 pb-5">
+            <div class="row g-4">
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm">
+                  <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                      <i class="bi bi-heart-fill text-danger" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h4 class="fw-bold mb-2">Favorites</h4>
+                    <p class="text-muted mb-3">Save and organize your favorite recipes</p>
+                    <a href="/favorites" class="btn btn-primary">View Favorites</a>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm">
+                  <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                      <i class="bi bi-search text-primary" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h4 class="fw-bold mb-2">Discover</h4>
+                    <p class="text-muted mb-3">Find new recipes that match your preferences</p>
+                    <a href="/discover" class="btn btn-primary">Start Exploring</a>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-0 shadow-sm">
+                  <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                      <i class="bi bi-gear-fill text-secondary" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h4 class="fw-bold mb-2">Settings</h4>
+                    <p class="text-muted mb-3">Customize your meal planning preferences</p>
+                    <a href="/settings" class="btn btn-primary">Manage Settings</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
