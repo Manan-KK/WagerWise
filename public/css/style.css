@@ -81,6 +81,51 @@ body {
   font-weight: 600;
 }
 
+/* Fix white text on white background - when bg-white is used, use dark text */
+.card-header.bg-white {
+  background-color: white !important;
+  color: var(--text-primary) !important;
+}
+
+.card-header.bg-white h5,
+.card-header.bg-white h4,
+.card-header.bg-white h3,
+.card-header.bg-white h2,
+.card-header.bg-white h1,
+.card-header.bg-white p,
+.card-header.bg-white span,
+.card-header.bg-white div,
+.card-header.bg-white small,
+.card-header.bg-white .text-secondary,
+.card-header.bg-white .text-muted {
+  color: var(--text-primary) !important;
+}
+
+/* Ensure text-secondary and text-muted work on white backgrounds */
+.bg-white .text-secondary,
+.bg-white .text-muted {
+  color: var(--text-secondary) !important;
+}
+
+/* Fix any white text classes on white backgrounds */
+.bg-white .text-white,
+.bg-white .text-white-50,
+.bg-white .text-white-75 {
+  color: var(--text-primary) !important;
+}
+
+/* Ensure card headers with white background have proper text color */
+.card.bg-white .card-header,
+.card.bg-white .card-body {
+  color: var(--text-primary);
+}
+
+/* Fix any elements with white background */
+.bg-white,
+.bg-body-tertiary {
+  color: var(--text-primary);
+}
+
 .card-body {
   padding: 1.5rem;
 }
@@ -493,6 +538,15 @@ footer {
 .card-header {
   display: flex;
   align-items: center;
+}
+
+/* Additional fix for card headers - ensure text is visible */
+.card-header:not(.bg-white) {
+  color: white;
+}
+
+.card-header.bg-white * {
+  color: var(--text-primary) !important;
 }
 
 /* Center form sections */
