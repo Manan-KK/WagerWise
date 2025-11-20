@@ -129,3 +129,96 @@ FOLLOW-UP ITEMS:
 
 BLOCKERS:
 - None identified in this session
+
+===============================================================================
+SESSION 4 - November 19, 2025
+MEETING SUMMARY:
+Final weekly project meeting focused on polishing the UI, stabilizing the backend, and preparing for the presentation. Team reviewed recent changes including data handling updates, new recipe-related features, visual styling, and bug fixes. Primary focus moving forward is comprehensive testing, consistent styling, and ensuring all features are stable and presentation-ready.
+DECISIONS MADE:
+
+
+API usage discontinued due to rate limiting; switch to data dump for reliability
+
+
+“View Full Recipe” feature adopted as core functionality
+
+
+“Add to Grocery List” feature implemented and kept for final version
+
+
+Updated color scheme and new logo approved as final branding
+
+
+Final sprint will prioritize testing, CSS consistency, and minor visual refinements
+
+
+ACTION ITEMS:
+
+
+George
+
+
+This week: Standardize CSS across pages to keep layout and styling uniform
+
+
+Next week: Review all pages for spacing issues, potentially add images and final visual polish
+
+
+
+
+Manan
+
+
+This week: Performed data dump, removed API integration, implemented “View Full Recipe” and “Add to Grocery List” features
+
+
+Next week: Test all features, verify backend functionality, and ensure readiness for presentation
+
+
+
+
+Justin
+
+
+This week: Conducted testing, made minor UI/UX improvements, fixed email bug on registration page
+
+
+Next week: Ensure recipes are aligned uniformly and adjust color usage where needed
+
+
+
+
+Will
+
+
+This week: Updated overall website color scheme and changed the logo
+
+
+Next week: Ensure all features work without new regressions, possibly refine styling on the Discover page
+
+
+
+
+FOLLOW-UP ITEMS:
+
+
+API removal and data dump transition – Confirm all data loads correctly (COMPLETED)
+
+
+“View Full Recipe” feature – Verify usability and edge cases (COMPLETED)
+
+
+“Add to Grocery List” feature – Confirm correct data flow and display (COMPLETED)
+
+
+Registration email bug – Re-test to ensure fix is stable (COMPLETED)
+
+
+UI consistency – Final pass on CSS spacing, recipe alignment, and overall visual coherence (IN PROGRESS)
+
+
+Final testing – Full end-to-end test of frontend and backend in presentation environment (PENDING)
+
+
+BLOCKERS:
+None currently, previous API rate limiting issue mitigated by data dump approach.
